@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"encoding/json"
 	"fmt"
+	"log"
 	"regexp"
 	"sort"
 	"strings"
@@ -703,4 +704,142 @@ func flattenCloudFormationOutputs(cfOutputs []*cloudformation.Output) map[string
 		outputs[*o.OutputKey] = *o.OutputValue
 	}
 	return outputs
+}
+
+// normalizeJson is a JSON-in, JSON-out function that assures JSON strings
+// supplied by the user appear the same as they would in AWS.
+//
+// Note that this function does not *sort* JSON, and as such may be insufficient
+// to guard against unneeded changes in things such as IAM and resource policy
+// documents. For such functionality, see normalizePolicyDocument.
+func normalizeJson(jsonString interface{}) string {
+	if jsonString == nil {
+		return ""
+	}
+	j := make(map[string]interface{})
+	err := json.Unmarshal([]byte(jsonString.(string)), &j)
+	if err != nil {
+		return fmt.Sprintf("Error parsing JSON: %s", err)
+	}
+	b, _ := json.Marshal(j)
+	return string(b[:])
+}
+
+// IAM policy document normalization logic.
+//
+// AWS will change policies that are submitted to conform to the following
+// guidelines, even though other forms are not necessarily syntatically correct:
+//
+// * When a policy statement has no Sid specified, it will create a Sid entry
+//   with blank data.
+// * When a policy statement only has one action, but is specified in an array,
+//   it will truncate the array and use a single element string action instead.
+//   (ie: "Action": [ "s3:ListBucket" ] becomes "Action": "s3:ListBucket")
+// * Multiple actions will be sorted alphabetically.
+//
+// The objective of these functions is to accept a valid Policy JSON file,
+// fix it to conform the following above guidelines, and then return the JSON.
+//
+
+// struct for the top-level of the document.
+type policyDocument struct {
+	Version   string
+	Id        string `json:",omitempty"`
+	Statement []policyDocumentStatement
+}
+
+// struct for policy document statements.
+type policyDocumentStatement struct {
+	Sid          string
+	Effect       string
+	Principal    map[string]interface{}            `json:",omitempty"`
+	NotPrincipal map[string]interface{}            `json:",omitempty"`
+	Action       interface{}                       `json:",omitempty"`
+	NotAction    interface{}                       `json:",omitempty"`
+	Resource     interface{}                       `json:",omitempty"`
+	NotResource  interface{}                       `json:",omitempty"`
+	Condition    map[string]map[string]interface{} `json:",omitempty"`
+}
+
+// policyDocArray allows us to define a slice of interfaces to sort, versus
+// a slice of strings.
+type policyDocArray []interface{}
+
+func (a policyDocArray) Len() int      { return len(a) }
+func (a policyDocArray) Swap(i, j int) { a[i], a[j] = a[j], a[i] }
+
+// policyDocArray.Less() is implemented to sort only on neighboring string values,
+// so if the array contains non-string values, this will give unstable results.
+func (a policyDocArray) Less(i, j int) bool {
+	switch ival := a[i].(type) {
+	case string:
+		if jval, ok := a[j].(string); ok {
+			log.Printf("[DEBUG] sort: %s < %s", ival, jval)
+			return ival < jval
+		}
+	}
+	return false
+}
+
+// normalizePolicyDocument takes the JSON policy, normalizes the statements
+// and sorts any arrays (namely actions).
+func normalizePolicyDocument(jsonString interface{}) string {
+	if jsonString == nil {
+		return ""
+	}
+	var j policyDocument
+	err := json.Unmarshal([]byte(jsonString.(string)), &j)
+	if err != nil {
+		return fmt.Sprintf("Error parsing JSON: %s", err)
+	}
+	normalizePolicyStatements(j.Statement)
+	b, _ := json.Marshal(j)
+	return string(b[:])
+}
+
+// normalizePolicyStatements calls out to normalize the various fields in the
+// policy document struct that could have arrays. This then calls out to
+// normalizeStatementElements.
+func normalizePolicyStatements(statements []policyDocumentStatement) {
+	for i, v := range statements {
+		statements[i].Action = normalizeStatementElements(v.Action)
+		statements[i].NotAction = normalizeStatementElements(v.NotAction)
+		statements[i].Resource = normalizeStatementElements(v.Resource)
+		statements[i].NotResource = normalizeStatementElements(v.NotResource)
+		// Principal and NotPrincipal
+		for _, k := range []string{"AWS", "CanonicalUser", "Federated", "Service"} {
+			if element, ok := statements[i].Principal[k]; ok {
+				statements[i].Principal[k] = normalizeStatementElements(element)
+			}
+			if element, ok := statements[i].NotPrincipal[k]; ok {
+				statements[i].NotPrincipal[k] = normalizeStatementElements(element)
+			}
+		}
+		// The Condition object - 2-level deep flattening
+		for ce := range statements[i].Condition {
+			for ck, cv := range statements[i].Condition[ce] {
+				statements[i].Condition[ce][ck] = normalizeStatementElements(cv)
+			}
+		}
+	}
+}
+
+// normalizeStatementElements does one of two things:
+//  * If element is a single-element array/slice, it will "flatten" it and
+//    return the individual value.
+//  * If element is a multi-value array, the string values in the array are
+//    sorted.
+func normalizeStatementElements(element interface{}) interface{} {
+	log.Printf("[DEBUG] checking to either truncate or sort policy doc element %v ", element)
+	switch element := element.(type) {
+	case []interface{}:
+		if len(element) < 2 {
+			log.Printf("[DEBUG] single element %s found in policy, returning single element", element[0])
+			return element[0]
+		}
+		log.Printf("[DEBUG] multiple elements %v found in policy, sorting strings", element)
+		sort.Sort(policyDocArray(element))
+		return element
+	}
+	return element
 }
