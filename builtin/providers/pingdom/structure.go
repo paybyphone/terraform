@@ -24,10 +24,6 @@ func baseCheckSchema() map[string]*schema.Schema {
 			Type:     schema.TypeString,
 			Required: true,
 		},
-		"paused": &schema.Schema{
-			Type:     schema.TypeString,
-			Optional: true,
-		},
 		"resolution": &schema.Schema{
 			Type:     schema.TypeInt,
 			Optional: true,
@@ -357,7 +353,6 @@ func expandBaseCheck(d *schema.ResourceData) checks.CheckConfiguration {
 	return checks.CheckConfiguration{
 		Name:                     d.Get("name").(string),
 		Host:                     d.Get("host").(string),
-		Paused:                   d.Get("paused").(bool),
 		Resolution:               d.Get("resolution").(int),
 		ContactIDs:               intSlice(d.Get("contact_ids").(*schema.Set).List()),
 		SendToEmail:              d.Get("send_to_email").(bool),
@@ -378,8 +373,6 @@ func expandBaseCheck(d *schema.ResourceData) checks.CheckConfiguration {
 func flattenBaseCheck(c checks.DetailedCheckEntry, d *schema.ResourceData) {
 	d.Set("name", c.Name)
 	d.Set("host", c.Hostname)
-	// TODO: think about removing this from resources altogether
-	// d.Set("paused", c.Paused)
 	d.Set("resolution", c.Resolution)
 	d.Set("contact_ids", schema.NewSet(intSetHash, interfaceSlice(c.ContactIDs)))
 	d.Set("send_to_email", c.SendToEmail)
