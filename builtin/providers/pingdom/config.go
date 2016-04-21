@@ -18,10 +18,10 @@ type Config struct {
 	AppKey string
 }
 
-// PingdomClient is a structure that contains the client connections necessary
+// ProviderPingdomClient is a structure that contains the client connections necessary
 // to interface with the Pingdom API. Example: checks.Check, or
 // contacts.Contact.
-type PingdomClient struct {
+type ProviderPingdomClient struct {
 	// The connection for the checks resource, for managing checks.
 	checksconn *checks.Check
 
@@ -43,7 +43,7 @@ func (c *Config) Client() (interface{}, error) {
 	}
 
 	// Create the client object and return it
-	client := PingdomClient{
+	client := ProviderPingdomClient{
 		checksconn:   checks.New(cfg),
 		contactsconn: contacts.New(cfg),
 	}
