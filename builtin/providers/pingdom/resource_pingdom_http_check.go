@@ -1,6 +1,11 @@
 package pingdom
 
-import "github.com/hashicorp/terraform/helper/schema"
+import (
+	"strconv"
+
+	"github.com/hashicorp/terraform/helper/schema"
+	"github.com/paybyphone/pingdom-go-sdk/resource/checks"
+)
 
 // resourcePingdomHTTPCheck defines the resource for the pingdom_http_check
 // Terraform resource.
@@ -18,7 +23,21 @@ func resourcePingdomHTTPCheck() *schema.Resource {
 // resourcePingdomHTTPCheckCreate runs the create portion of the pingdom_http_check
 // resource.
 func resourcePingdomHTTPCheckCreate(d *schema.ResourceData, meta interface{}) error {
-	return nil
+	svc := meta.(*ProviderPingdomClient).checksconn
+	params := checks.CreateCheckInput{
+		CheckConfiguration:     expandBaseCheck(d),
+		CheckConfigurationHTTP: expandHTTPCheck(d),
+	}
+	params.Type = "http"
+
+	out, err := svc.CreateCheck(params)
+	if err != nil {
+		return err
+	}
+
+	d.SetId(strconv.Itoa(out.Check.ID))
+
+	return resourcePingdomHTTPCheckRead(d, meta)
 }
 
 // resourcePingdomHTTPCheckRead runs the read portion of the pingdom_http_check
