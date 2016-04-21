@@ -2,6 +2,7 @@ package pingdom
 
 import (
 	"fmt"
+	"strconv"
 
 	"github.com/hashicorp/terraform/helper/schema"
 	"github.com/paybyphone/pingdom-go-sdk/resource/checks"
@@ -17,10 +18,6 @@ func baseCheckSchema() map[string]*schema.Schema {
 			Required: true,
 		},
 		"host": &schema.Schema{
-			Type:     schema.TypeString,
-			Required: true,
-		},
-		"type": &schema.Schema{
 			Type:     schema.TypeString,
 			Required: true,
 		},
@@ -81,6 +78,26 @@ func baseCheckSchema() map[string]*schema.Schema {
 			Computed: true,
 			Elem:     &schema.Schema{Type: schema.TypeString},
 			Set:      schema.HashString,
+		},
+		"last_error_time": &schema.Schema{
+			Type:     schema.TypeInt,
+			Computed: true,
+		},
+		"last_test_time": &schema.Schema{
+			Type:     schema.TypeInt,
+			Computed: true,
+		},
+		"last_response_time": &schema.Schema{
+			Type:     schema.TypeInt,
+			Computed: true,
+		},
+		"created": &schema.Schema{
+			Type:     schema.TypeInt,
+			Computed: true,
+		},
+		"status": &schema.Schema{
+			Type:     schema.TypeString,
+			Computed: true,
 		},
 	}
 }
@@ -371,6 +388,7 @@ func expandBaseCheck(d *schema.ResourceData) checks.CheckConfiguration {
 // flattenBaseCheck takes a DetailedCheckEntry struct and sets all the
 // appropriate base check fields for the resource.
 func flattenBaseCheck(c checks.DetailedCheckEntry, d *schema.ResourceData) {
+	d.SetId(strconv.Itoa(c.ID))
 	d.Set("name", c.Name)
 	d.Set("host", c.Hostname)
 	d.Set("resolution", c.Resolution)
@@ -384,6 +402,11 @@ func flattenBaseCheck(c checks.DetailedCheckEntry, d *schema.ResourceData) {
 	d.Set("notify_again_every", c.NotifyAgainEvery)
 	d.Set("notify_when_back_up", c.NotifyWhenBackUp)
 	d.Set("ipv6", c.IPv6)
+	d.Set("last_error_time", c.LastErrorTime)
+	d.Set("last_test_time", c.LastTestTime)
+	d.Set("last_response_time", c.LastResponseTime)
+	d.Set("created", c.Created)
+	d.Set("status", c.Status)
 }
 
 // flattenBaseCheckTags takes a CheckListEntryTags slice, sets user-tagged tags,
@@ -427,7 +450,11 @@ func flattenHTTPCheck(c checks.DetailedCheckEntryHTTP, d *schema.ResourceData) {
 	d.Set("should_contain", c.ShouldContain)
 	d.Set("should_not_contain", c.ShouldNotContain)
 	d.Set("post_data", c.PostData)
-	d.Set("request_headers", schema.NewSet(schema.HashString, interfaceSlice(c.RequestHeaders)))
+	headers := []string{}
+	for k, v := range c.RequestHeaders {
+		headers = append(headers, fmt.Sprintf("%s:%s", k, v))
+	}
+	d.Set("request_headers", schema.NewSet(schema.HashString, interfaceSlice(headers)))
 }
 
 // expandHTTPCustomCheck expands all of the base check fields and returns a
@@ -593,10 +620,6 @@ func interfaceSlice(src interface{}) []interface{} {
 			dst = append(dst, v)
 		}
 	case []int:
-		for _, v := range w {
-			dst = append(dst, v)
-		}
-	case map[string]string:
 		for _, v := range w {
 			dst = append(dst, v)
 		}
