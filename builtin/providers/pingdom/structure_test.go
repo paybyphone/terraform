@@ -472,19 +472,6 @@ func TestInterfaceSlice_int(t *testing.T) {
 	}
 }
 
-//func TestInterfaceSlice_map(t *testing.T) {
-//in := map[string]string{
-//"a": "one",
-//"b": "two",
-//}
-//expected := []interface{}{"two", "one"}
-//out := interfaceSlice(in)
-
-//if reflect.DeepEqual(expected, out) == false {
-//t.Fatalf("expected %v, got %v", expected, out)
-//}
-//}
-
 func TestInterfaceSlice_unsupported(t *testing.T) {
 	failed := false
 	in := []bool{true, false}
