@@ -4,6 +4,8 @@ import (
 	"io/ioutil"
 	"os"
 	"path/filepath"
+	"reflect"
+	"sort"
 	"strings"
 	"testing"
 
@@ -88,6 +90,55 @@ func TestModuleOutput(t *testing.T) {
 	actual := strings.TrimSpace(ui.OutputWriter.String())
 	if actual != "tastatur" {
 		t.Fatalf("bad: %#v", actual)
+	}
+}
+
+func TestModuleOutput_allOutputs(t *testing.T) {
+	originalState := &terraform.State{
+		Modules: []*terraform.ModuleState{
+			&terraform.ModuleState{
+				Path: []string{"root"},
+				Outputs: map[string]interface{}{
+					"foo": "bar",
+				},
+			},
+			&terraform.ModuleState{
+				Path: []string{"root", "my_module"},
+				Outputs: map[string]interface{}{
+					"blah": "tastatur",
+					"baz":  "qux",
+				},
+			},
+		},
+	}
+
+	statePath := testStateFile(t, originalState)
+
+	ui := new(cli.MockUi)
+	c := &OutputCommand{
+		Meta: Meta{
+			ContextOpts: testCtxConfig(testProvider()),
+			Ui:          ui,
+		},
+	}
+
+	args := []string{
+		"-state", statePath,
+		"-module", "my_module",
+		"blah",
+	}
+
+	if code := c.Run(args); code != 0 {
+		t.Fatalf("bad: \n%s", ui.ErrorWriter.String())
+	}
+
+	expectedOutput := strings.Split("\n", "blah = tastatur\nbaz = qux\n")
+	sort.Strings(expectedOutput)
+
+	output := strings.Split("\n", ui.OutputWriter.String())
+	sort.Strings(output)
+	if reflect.DeepEqual(output, expectedOutput) != true {
+		t.Fatalf("Expected output: %#v\ngiven: %#v", expectedOutput, output)
 	}
 }
 
