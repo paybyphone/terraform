@@ -508,6 +508,12 @@
 			"revision": "2cc71659118a868dc7544a7ef0808eb42d487011"
 		},
 		{
+			"checksumSHA1": "ShJPxXVnvAc3oHo8NMz3jxdLwzc=",
+			"path": "github.com/aws/aws-sdk-go/service/ses",
+			"revision": "2cc71659118a868dc7544a7ef0808eb42d487011",
+			"revisionTime": "2016-05-03T21:45:29Z"
+		},
+		{
 			"comment": "v1.1.23",
 			"path": "github.com/aws/aws-sdk-go/service/sns",
 			"revision": "2cc71659118a868dc7544a7ef0808eb42d487011"
