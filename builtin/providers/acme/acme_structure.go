@@ -4,12 +4,13 @@ import (
 	"bytes"
 	"crypto"
 	"crypto/x509"
+	"encoding/json"
 	"encoding/pem"
 	"fmt"
+	"log"
 
 	"github.com/hashicorp/terraform/helper/hashcode"
 	"github.com/hashicorp/terraform/helper/schema"
-	"github.com/imdario/mergo"
 	"github.com/xenolf/lego/acme"
 )
 
@@ -43,8 +44,20 @@ func registrationSchema() map[string]*schema.Schema {
 			Required: true,
 			ForceNew: true,
 		},
-		"registration": &schema.Schema{
-			Type:     schema.TypeMap,
+		"registration_body": &schema.Schema{
+			Type:     schema.TypeString,
+			Computed: true,
+		},
+		"registration_uri": &schema.Schema{
+			Type:     schema.TypeString,
+			Computed: true,
+		},
+		"registration_new_authz_url": &schema.Schema{
+			Type:     schema.TypeString,
+			Computed: true,
+		},
+		"registration_tos_url": &schema.Schema{
+			Type:     schema.TypeString,
 			Computed: true,
 		},
 	}
@@ -217,43 +230,78 @@ func expandACMEUser(d *schema.ResourceData) (*acmeUser, error) {
 	if v, ok := d.GetOk("email_address"); ok {
 		user.Email = v.(string)
 	}
-	if v, ok := d.GetOk("registration"); ok {
-		reg := &acme.RegistrationResource{}
-		err := mergo.Map(reg, v)
-		if err != nil {
-			return nil, err
-		}
+	if reg, ok := expandACMERegistration(d); ok {
 		user.Registration = reg
 	}
 
 	return user, nil
 }
 
-// saveACMERegistration takes an *acmeUser and sets the appropriate fields
+// expandACMERegistration takes a *schema.ResourceData and builds an
+// *acme.RegistrationResource, complete with body, for use in lego calls.
+//
+// Note that this function will return nil, false if any of the computed
+// registration fields are un-readable, to allow non-fatal behaviour when the
+// data does not exist.
+func expandACMERegistration(d *schema.ResourceData) (*acme.RegistrationResource, bool) {
+	reg := acme.RegistrationResource{}
+	var v interface{}
+	var ok bool
+
+	if v, ok = d.GetOk("registration_body"); ok == false {
+		return nil, false
+	}
+	body := acme.Registration{}
+	err := json.Unmarshal([]byte(v.(string)), &body)
+	if err != nil {
+		log.Printf("[DEBUG] Error reading JSON for registration body: %s", err.Error())
+		return nil, false
+	}
+	reg.Body = body
+
+	if v, ok = d.GetOk("registration_uri"); ok == false {
+		return nil, false
+	}
+	reg.URI = v.(string)
+
+	if v, ok = d.GetOk("registration_new_authz_url"); ok == false {
+		return nil, false
+	}
+	reg.NewAuthzURL = v.(string)
+
+	// TOS url can be blank, ensure we don't fail on this
+	if v, ok = d.GetOk("registration_tos_url"); ok == false {
+		log.Printf("[DEBUG] ACME reg %s: registration_tos_url is blank", reg.URI)
+	}
+	reg.TosURL = v.(string)
+
+	return &reg, true
+}
+
+// saveACMERegistration takes an *acme.RegistrationResource and sets the appropriate fields
 // for a registration resource.
 func saveACMERegistration(d *schema.ResourceData, reg *acme.RegistrationResource) error {
-	// We take the URI as the resource ID, as the ID otherwise returned is an
-	// integer and is not entirely too useful on its own.
 	d.SetId(reg.URI)
 
-	m := make(map[string]interface{})
-	err := mergo.Map(m, reg)
+	body, err := json.Marshal(reg)
 	if err != nil {
-		return fmt.Errorf("Error getting user registartion: %s", err.Error())
+		return fmt.Errorf("error reading registration body: %s", err.Error())
 	}
-	err = d.Set("registration", m)
-	if err != nil {
-		return fmt.Errorf("Error saving user registartion: %s", err.Error())
-	}
+	d.Set("registration_body", string(body))
+
+	d.Set("registration_uri", reg.URI)
+	d.Set("registration_new_authz_url", reg.NewAuthzURL)
+	d.Set("registration_tos_url", reg.TosURL)
 
 	return nil
 }
 
-// expandACMEClient creates a connection to an ACME server from resource data.
-func expandACMEClient(d *schema.ResourceData) (*acme.Client, error) {
+// expandACMEClient creates a connection to an ACME server from resource data,
+// and also returns the user.
+func expandACMEClient(d *schema.ResourceData) (*acme.Client, *acmeUser, error) {
 	user, err := expandACMEUser(d)
 	if err != nil {
-		return nil, fmt.Errorf("Error getting user data: %s", err.Error())
+		return nil, nil, fmt.Errorf("Error getting user data: %s", err.Error())
 	}
 
 	// Note this function is used by both the registration and certificate
@@ -264,12 +312,12 @@ func expandACMEClient(d *schema.ResourceData) (*acme.Client, error) {
 		keytype = "RSA" + v.(string)
 	}
 
-	client, err := acme.NewClient(d.Get("endpoint").(string), user, acme.KeyType(keytype))
+	client, err := acme.NewClient(d.Get("server_url").(string), user, acme.KeyType(keytype))
 	if err != nil {
-		return nil, err
+		return nil, nil, err
 	}
 
-	return client, nil
+	return client, user, nil
 }
 
 // expandCertificateResource takes saved state in the certificate resource

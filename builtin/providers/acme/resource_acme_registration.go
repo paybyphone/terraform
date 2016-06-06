@@ -5,6 +5,7 @@ import "github.com/hashicorp/terraform/helper/schema"
 func resourceACMERegistration() *schema.Resource {
 	return &schema.Resource{
 		Create: resourceACMERegistrationCreate,
+		Read:   resourceACMERegistrationRead,
 		Delete: resourceACMERegistrationDelete,
 
 		Schema: registrationSchemaFull(),
@@ -13,7 +14,7 @@ func resourceACMERegistration() *schema.Resource {
 
 func resourceACMERegistrationCreate(d *schema.ResourceData, meta interface{}) error {
 	// register and agree to the TOS
-	client, err := expandACMEClient(d)
+	client, user, err := expandACMEClient(d)
 	if err != nil {
 		return err
 	}
@@ -21,6 +22,7 @@ func resourceACMERegistrationCreate(d *schema.ResourceData, meta interface{}) er
 	if err != nil {
 		return err
 	}
+	user.Registration = reg
 	err = client.AgreeToTOS()
 	if err != nil {
 		return err
@@ -34,15 +36,14 @@ func resourceACMERegistrationCreate(d *schema.ResourceData, meta interface{}) er
 
 	return nil
 }
+
+func resourceACMERegistrationRead(d *schema.ResourceData, meta interface{}) error {
+	return nil
+}
+
 func resourceACMERegistrationDelete(d *schema.ResourceData, meta interface{}) error {
-	client, err := expandACMEClient(d)
-	if err != nil {
-		return err
-	}
-	err = client.DeleteRegistration()
-	if err != nil {
-		return err
-	}
+	// TODO: Add deletion support using *acme.Client.DeleteRegistration().
+	// I had this, but I think I jumped the gun on it still being in draft :)
 	d.SetId("")
 	return nil
 }

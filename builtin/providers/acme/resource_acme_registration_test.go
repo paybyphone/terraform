@@ -12,9 +12,8 @@ import (
 
 func TestAccACMERegistration_basic(t *testing.T) {
 	resource.Test(t, resource.TestCase{
-		PreCheck:     func() { testAccPreCheckReg(t) },
-		Providers:    testAccProviders,
-		CheckDestroy: testAccCheckACMERegistrationDestroy,
+		PreCheck:  func() { testAccPreCheckReg(t) },
+		Providers: testAccProviders,
 		Steps: []resource.TestStep{
 			resource.TestStep{
 				Config: testAccACMERegistrationConfig(),
@@ -34,10 +33,21 @@ func testAccCheckACMERegistrationValid(n string) resource.TestCheckFunc {
 		}
 
 		if rs.Primary.ID == "" {
-			return fmt.Errorf("AMI data source ID not set")
+			return fmt.Errorf("ACME registration ID not set")
 		}
 
-		actual := rs.Primary.Attributes["registration.uri"]
+		d := testAccCheckACMERegistrationResourceData(rs)
+
+		client, _, err := expandACMEClient(d)
+		if err != nil {
+			return fmt.Errorf("Could not build ACME client off reg: %s", err.Error())
+		}
+		reg, err := client.QueryRegistration()
+		if err != nil {
+			return fmt.Errorf("Error on reg query: %s", err.Error())
+		}
+
+		actual := reg.URI
 		expected := rs.Primary.ID
 
 		if actual != expected {
@@ -47,33 +57,24 @@ func testAccCheckACMERegistrationValid(n string) resource.TestCheckFunc {
 	}
 }
 
-func testAccCheckACMERegistrationDestroy(s *terraform.State) error {
-	for _, rs := range s.RootModule().Resources {
-		if rs.Type != "acme_registration" {
-			continue
-		}
-		r := &schema.Resource{
-			Schema: registrationSchemaFull(),
-		}
-		d := r.TestResourceData()
-
-		d.SetId(rs.Primary.ID)
-		d.Set("server_url", rs.Primary.Attributes["server_url"])
-		d.Set("account_key_pem", rs.Primary.Attributes["account_key_pem"])
-		d.Set("email_address", rs.Primary.Attributes["email_address"])
-		d.Set("registration", rs.Primary.Attributes["registration"])
-
-		client, err := expandACMEClient(d)
-		if err != nil {
-			return err
-		}
-		_, err = client.QueryRegistration()
-		if err == nil {
-			return fmt.Errorf("Expecting error on reg query, got none, reg still valid")
-		}
-
+// testAccCheckACMERegistrationResourceData returns a *schema.ResourceData that should match a
+// acme_registration resource.
+func testAccCheckACMERegistrationResourceData(rs *terraform.ResourceState) *schema.ResourceData {
+	r := &schema.Resource{
+		Schema: registrationSchemaFull(),
 	}
-	return nil
+	d := r.TestResourceData()
+
+	d.SetId(rs.Primary.ID)
+	d.Set("server_url", rs.Primary.Attributes["server_url"])
+	d.Set("account_key_pem", rs.Primary.Attributes["account_key_pem"])
+	d.Set("email_address", rs.Primary.Attributes["email_address"])
+	d.Set("registration_body", rs.Primary.Attributes["registration_body"])
+	d.Set("registration_uri", rs.Primary.Attributes["registration_uri"])
+	d.Set("registration_new_authz_url", rs.Primary.Attributes["registration_new_authz_url"])
+	d.Set("registration_tos_url", rs.Primary.Attributes["registration_tos_url"])
+
+	return d
 }
 
 func testAccPreCheckReg(t *testing.T) {
