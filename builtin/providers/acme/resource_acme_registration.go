@@ -7,7 +7,7 @@ func resourceACMERegistration() *schema.Resource {
 		Create: resourceACMERegistrationCreate,
 		Delete: resourceACMERegistrationDelete,
 
-		Schema: registrationSchema(),
+		Schema: registrationSchemaFull(),
 	}
 }
 

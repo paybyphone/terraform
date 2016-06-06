@@ -6,6 +6,7 @@ import (
 	"testing"
 
 	"github.com/hashicorp/terraform/helper/resource"
+	"github.com/hashicorp/terraform/helper/schema"
 	"github.com/hashicorp/terraform/terraform"
 )
 
@@ -47,7 +48,31 @@ func testAccCheckACMERegistrationValid(n string) resource.TestCheckFunc {
 }
 
 func testAccCheckACMERegistrationDestroy(s *terraform.State) error {
-	// TODO: Fill this in - need to figure out how to query reg in lego
+	for _, rs := range s.RootModule().Resources {
+		if rs.Type != "acme_registration" {
+			continue
+		}
+		r := &schema.Resource{
+			Schema: registrationSchemaFull(),
+		}
+		d := r.TestResourceData()
+
+		d.SetId(rs.Primary.ID)
+		d.Set("server_url", rs.Primary.Attributes["server_url"])
+		d.Set("account_key_pem", rs.Primary.Attributes["account_key_pem"])
+		d.Set("email_address", rs.Primary.Attributes["email_address"])
+		d.Set("registration", rs.Primary.Attributes["registration"])
+
+		client, err := expandACMEClient(d)
+		if err != nil {
+			return err
+		}
+		_, err = client.QueryRegistration()
+		if err == nil {
+			return fmt.Errorf("Expecting error on reg query, got none, reg still valid")
+		}
+
+	}
 	return nil
 }
 
