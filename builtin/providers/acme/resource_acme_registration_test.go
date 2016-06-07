@@ -38,7 +38,7 @@ func testAccCheckACMERegistrationValid(n string) resource.TestCheckFunc {
 
 		d := testAccCheckACMERegistrationResourceData(rs)
 
-		client, _, err := expandACMEClient(d)
+		client, _, err := expandACMEClient(d, d.Get("registration_uri").(string))
 		if err != nil {
 			return fmt.Errorf("Could not build ACME client off reg: %s", err.Error())
 		}

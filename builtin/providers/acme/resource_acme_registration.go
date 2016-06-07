@@ -14,7 +14,7 @@ func resourceACMERegistration() *schema.Resource {
 
 func resourceACMERegistrationCreate(d *schema.ResourceData, meta interface{}) error {
 	// register and agree to the TOS
-	client, user, err := expandACMEClient(d)
+	client, user, err := expandACMEClient(d, "")
 	if err != nil {
 		return err
 	}

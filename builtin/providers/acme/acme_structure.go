@@ -6,12 +6,25 @@ import (
 	"crypto/x509"
 	"encoding/json"
 	"encoding/pem"
+	"errors"
 	"fmt"
 	"log"
+	"os"
+	"time"
 
 	"github.com/hashicorp/terraform/helper/hashcode"
 	"github.com/hashicorp/terraform/helper/schema"
 	"github.com/xenolf/lego/acme"
+	"github.com/xenolf/lego/providers/dns/cloudflare"
+	"github.com/xenolf/lego/providers/dns/digitalocean"
+	"github.com/xenolf/lego/providers/dns/dnsimple"
+	"github.com/xenolf/lego/providers/dns/dyn"
+	"github.com/xenolf/lego/providers/dns/gandi"
+	"github.com/xenolf/lego/providers/dns/googlecloud"
+	"github.com/xenolf/lego/providers/dns/namecheap"
+	"github.com/xenolf/lego/providers/dns/rfc2136"
+	"github.com/xenolf/lego/providers/dns/route53"
+	"github.com/xenolf/lego/providers/dns/vultr"
 )
 
 // baseCheckSchema returns a map[string]*schema.Schema with all the elements
@@ -69,9 +82,14 @@ func registrationSchema() map[string]*schema.Schema {
 // The initial version of this only supports DNS challenges.
 func certificateSchema() map[string]*schema.Schema {
 	return map[string]*schema.Schema{
-		"domains": &schema.Schema{
-			Type:     schema.TypeSet,
+		"common_name": &schema.Schema{
+			Type:     schema.TypeString,
 			Required: true,
+			ForceNew: true,
+		},
+		"subject_alternate_names": &schema.Schema{
+			Type:     schema.TypeSet,
+			Optional: true,
 			Elem:     &schema.Schema{Type: schema.TypeString},
 			Set:      schema.HashString,
 			ForceNew: true,
@@ -100,6 +118,7 @@ func certificateSchema() map[string]*schema.Schema {
 			Type:     schema.TypeInt,
 			Optional: true,
 			Default:  7,
+			ForceNew: true,
 		},
 		"dns_challenge": &schema.Schema{
 			Type:     schema.TypeSet,
@@ -135,6 +154,23 @@ func certificateSchema() map[string]*schema.Schema {
 					},
 				},
 			},
+			ForceNew: true,
+		},
+		"http_challenge_port": &schema.Schema{
+			Type:     schema.TypeInt,
+			Optional: true,
+			Default:  80,
+			ForceNew: true,
+		},
+		"tls_challenge_port": &schema.Schema{
+			Type:     schema.TypeInt,
+			Optional: true,
+			Default:  443,
+			ForceNew: true,
+		},
+		"registration_uri": &schema.Schema{
+			Type:     schema.TypeString,
+			Required: true,
 			ForceNew: true,
 		},
 		"cert_domain": &schema.Schema{
@@ -209,15 +245,7 @@ func (u acmeUser) GetPrivateKey() crypto.PrivateKey {
 // email_address and private_key_pem fields, and a registration
 // if one exists.
 func expandACMEUser(d *schema.ResourceData) (*acmeUser, error) {
-	var buf bytes.Buffer
-	buf.WriteString(d.Get("account_key_pem").(string))
-
-	result, _ := pem.Decode(buf.Bytes())
-	if result == nil {
-		return nil, fmt.Errorf("Cannot decode supplied PEM data")
-	}
-
-	key, err := x509.ParsePKCS1PrivateKey(result.Bytes)
+	key, err := privateKeyFromPEM([]byte(d.Get("account_key_pem").(string)))
 	if err != nil {
 		return nil, err
 	}
@@ -230,9 +258,9 @@ func expandACMEUser(d *schema.ResourceData) (*acmeUser, error) {
 	if v, ok := d.GetOk("email_address"); ok {
 		user.Email = v.(string)
 	}
-	if reg, ok := expandACMERegistration(d); ok {
-		user.Registration = reg
-	}
+	//if reg, ok := expandACMERegistration(d); ok {
+	//user.Registration = reg
+	//}
 
 	return user, nil
 }
@@ -298,7 +326,10 @@ func saveACMERegistration(d *schema.ResourceData, reg *acme.RegistrationResource
 
 // expandACMEClient creates a connection to an ACME server from resource data,
 // and also returns the user.
-func expandACMEClient(d *schema.ResourceData) (*acme.Client, *acmeUser, error) {
+//
+// If regURL is supplied, the registration information is loaded in to the user's registration
+// via the registration URL.
+func expandACMEClient(d *schema.ResourceData, regURL string) (*acme.Client, *acmeUser, error) {
 	user, err := expandACMEUser(d)
 	if err != nil {
 		return nil, nil, fmt.Errorf("Error getting user data: %s", err.Error())
@@ -309,12 +340,23 @@ func expandACMEClient(d *schema.ResourceData) (*acme.Client, *acmeUser, error) {
 	// it's okay if it's empty for that.
 	var keytype string
 	if v, ok := d.GetOk("key_bits"); ok {
-		keytype = "RSA" + v.(string)
+		keytype = v.(string)
 	}
 
 	client, err := acme.NewClient(d.Get("server_url").(string), user, acme.KeyType(keytype))
 	if err != nil {
 		return nil, nil, err
+	}
+
+	if regURL != "" {
+		user.Registration = &acme.RegistrationResource{
+			URI: regURL,
+		}
+		reg, err := client.QueryRegistration()
+		if err != nil {
+			return nil, nil, err
+		}
+		user.Registration = reg
 	}
 
 	return client, user, nil
@@ -345,6 +387,112 @@ func saveCertificateResource(d *schema.ResourceData, cert acme.CertificateResour
 	d.Set("certificate_pem", string(cert.Certificate))
 }
 
+// certDaysRemaining takes an acme.CertificateResource, parses the
+// certificate, and computes the days that it has remaining.
+func certDaysRemaining(cert acme.CertificateResource) (int64, error) {
+	x509Certs, err := parsePEMBundle(cert.Certificate)
+	if err != nil {
+		return 0, err
+	}
+
+	c := x509Certs[0]
+
+	expiry := c.NotAfter.Unix()
+	now := time.Now().Unix()
+
+	return (expiry - now) / 86400, nil
+}
+
+// parsePEMBundle parses a certificate bundle from top to bottom and returns
+// a slice of x509 certificates. This function will error if no certificates are found.
+//
+// Note that this is taken directly from lego - may look at exporting it there.
+func parsePEMBundle(bundle []byte) ([]*x509.Certificate, error) {
+	var certificates []*x509.Certificate
+	var certDERBlock *pem.Block
+
+	for {
+		certDERBlock, bundle = pem.Decode(bundle)
+		if certDERBlock == nil {
+			break
+		}
+
+		if certDERBlock.Type == "CERTIFICATE" {
+			cert, err := x509.ParseCertificate(certDERBlock.Bytes)
+			if err != nil {
+				return nil, err
+			}
+			certificates = append(certificates, cert)
+		}
+	}
+
+	if len(certificates) == 0 {
+		return nil, errors.New("No certificates were found while parsing the bundle.")
+	}
+
+	return certificates, nil
+}
+
+// setDNSChallenge takes an *acme.Client and the DNS challenge complex
+// structure as a map[string]interface{}, and configues the client to only
+// allow a DNS challenge with the configured provider.
+func setDNSChallenge(client *acme.Client, m map[string]interface{}) error {
+	var provider acme.ChallengeProvider
+	var err error
+	var providerName string
+
+	if v, ok := m["provider"]; ok && v.(string) != "" {
+		providerName = v.(string)
+	} else {
+		return fmt.Errorf("DNS challenge provider not defined")
+	}
+	// Config only needs to be set if it's defined, otherwise existing env/SDK
+	// defaults are fine.
+	if v, ok := m["config"]; ok {
+		for k, v := range v.(map[string]interface{}) {
+			os.Setenv(k, v.(string))
+		}
+	}
+
+	// The below list was taken from lego's cli_handlers.go from this writing
+	// (June 2016). As such, this might not be a full list of supported
+	// providers. If a specific provider is wanted, check lego first, and then
+	// write the provider for lego and put in a PR.
+	switch providerName {
+	case "cloudflare":
+		provider, err = cloudflare.NewDNSProvider()
+	case "digitalocean":
+		provider, err = digitalocean.NewDNSProvider()
+	case "dnsimple":
+		provider, err = dnsimple.NewDNSProvider()
+	case "dyn":
+		provider, err = dyn.NewDNSProvider()
+	case "gandi":
+		provider, err = gandi.NewDNSProvider()
+	case "gcloud":
+		provider, err = googlecloud.NewDNSProvider()
+	case "manual":
+		provider, err = acme.NewDNSProviderManual()
+	case "namecheap":
+		provider, err = namecheap.NewDNSProvider()
+	case "route53":
+		provider, err = route53.NewDNSProvider()
+	case "rfc2136":
+		provider, err = rfc2136.NewDNSProvider()
+	case "vultr":
+		provider, err = vultr.NewDNSProvider()
+	default:
+		return fmt.Errorf("%s: unsupported DNS challenge provider", providerName)
+	}
+	if err != nil {
+		return err
+	}
+	client.SetChallengeProvider(acme.DNS01, provider)
+	client.ExcludeChallenges([]acme.Challenge{acme.HTTP01, acme.TLSSNI01})
+
+	return nil
+}
+
 // dnsChallengeSetHash computes the hash for the DNS challenge.
 func dnsChallengeSetHash(v interface{}) int {
 	var buf bytes.Buffer
@@ -354,4 +502,28 @@ func dnsChallengeSetHash(v interface{}) int {
 		buf.WriteString(fmt.Sprintf("%s-%s-", k, v.(string)))
 	}
 	return hashcode.String(buf.String())
+}
+
+// stringSlice converts an interface slice to a string slice.
+func stringSlice(src []interface{}) []string {
+	var dst []string
+	for _, v := range src {
+		dst = append(dst, v.(string))
+	}
+	return dst
+}
+
+// privateKeyFromPEM is converts a PEM block into a crypto.PrivateKey.
+func privateKeyFromPEM(keyPEM []byte) (crypto.PrivateKey, error) {
+	result, _ := pem.Decode([]byte(keyPEM))
+	if result == nil {
+		return nil, fmt.Errorf("Cannot decode supplied PEM data")
+	}
+	switch result.Type {
+	case "RSA PRIVATE KEY":
+		return x509.ParsePKCS1PrivateKey(result.Bytes)
+	case "EC PRIVATE KEY":
+		return x509.ParseECPrivateKey(result.Bytes)
+	}
+	return nil, fmt.Errorf("PEM data is not a private key")
 }
