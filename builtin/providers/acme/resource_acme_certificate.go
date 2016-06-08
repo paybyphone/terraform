@@ -7,6 +7,7 @@ import (
 	"strings"
 
 	"github.com/hashicorp/terraform/helper/schema"
+	"github.com/xenolf/lego/acme"
 )
 
 func resourceACMECertificate() *schema.Resource {
@@ -25,17 +26,6 @@ func resourceACMECertificateCreate(d *schema.ResourceData, meta interface{}) err
 		return err
 	}
 
-	cn := d.Get("common_name").(string)
-	domains := []string{cn}
-	if s, ok := d.GetOk("domains"); ok {
-		for _, v := range stringSlice(s.(*schema.Set).List()) {
-			if v == cn {
-				return fmt.Errorf("common name %s should not appear in SAN list", v)
-			}
-			domains = append(domains, v)
-		}
-	}
-
 	if v, ok := d.GetOk("dns_challenge"); ok {
 		setDNSChallenge(client, v.(*schema.Set).List()[0].(map[string]interface{}))
 	} else {
@@ -43,7 +33,25 @@ func resourceACMECertificateCreate(d *schema.ResourceData, meta interface{}) err
 		client.SetTLSAddress(":" + strconv.Itoa(d.Get("tls_challenge_port").(int)))
 	}
 
-	cert, errs := client.ObtainCertificate(domains, false, nil)
+	var cert acme.CertificateResource
+	var errs map[string]error
+
+	if csr, ok := d.GetOk("cert_request_pem"); ok {
+		cert, errs = client.ObtainCertificateForCSR([]byte(csr.(string)), false)
+	} else {
+		cn := d.Get("common_name").(string)
+		domains := []string{cn}
+		if s, ok := d.GetOk("subject_alternative_names"); ok {
+			for _, v := range stringSlice(s.(*schema.Set).List()) {
+				if v == cn {
+					return fmt.Errorf("common name %s should not appear in SAN list", v)
+				}
+				domains = append(domains, v)
+			}
+		}
+
+		cert, errs = client.ObtainCertificate(domains, false, nil)
+	}
 
 	if len(errs) > 0 {
 		messages := []string{}

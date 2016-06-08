@@ -86,22 +86,22 @@ func certificateSchema() map[string]*schema.Schema {
 			Type:          schema.TypeString,
 			Optional:      true,
 			ForceNew:      true,
-			ConflictsWith: []string{"certificate_request_pem"},
+			ConflictsWith: []string{"cert_request_pem"},
 		},
-		"subject_alternate_names": &schema.Schema{
+		"subject_alternative_names": &schema.Schema{
 			Type:          schema.TypeSet,
 			Optional:      true,
 			Elem:          &schema.Schema{Type: schema.TypeString},
 			Set:           schema.HashString,
 			ForceNew:      true,
-			ConflictsWith: []string{"certificate_request_pem"},
+			ConflictsWith: []string{"cert_request_pem"},
 		},
 		"key_type": &schema.Schema{
 			Type:          schema.TypeString,
 			Optional:      true,
 			ForceNew:      true,
 			Default:       "2048",
-			ConflictsWith: []string{"certificate_request_pem"},
+			ConflictsWith: []string{"cert_request_pem"},
 			ValidateFunc: func(v interface{}, k string) (ws []string, errors []error) {
 				value := v.(string)
 				found := false
@@ -112,15 +112,16 @@ func certificateSchema() map[string]*schema.Schema {
 				}
 				if found == false {
 					errors = append(errors, fmt.Errorf(
-						"Certificate key length must be either 2048, 4096, or 8192 bits"))
+						"Certificate key type must be one of P256, P384, 2048, 4096, or 8192"))
 				}
 				return
 			},
 		},
-		"certificate_request_pem": &schema.Schema{
+		"cert_request_pem": &schema.Schema{
 			Type:          schema.TypeString,
 			Optional:      true,
-			ConflictsWith: []string{"common_name", "subject_alternate_names", "key_type"},
+			ForceNew:      true,
+			ConflictsWith: []string{"common_name", "subject_alternative_names", "key_type"},
 		},
 		"min_days_remaining": &schema.Schema{
 			Type:     schema.TypeInt,
@@ -347,7 +348,7 @@ func expandACMEClient(d *schema.ResourceData, regURL string) (*acme.Client, *acm
 	// resources, but key type is not necessary during registration, so
 	// it's okay if it's empty for that.
 	var keytype string
-	if v, ok := d.GetOk("key_bits"); ok {
+	if v, ok := d.GetOk("key_type"); ok {
 		keytype = v.(string)
 	}
 
@@ -380,6 +381,7 @@ func expandCertificateResource(d *schema.ResourceData) acme.CertificateResource 
 		AccountRef:    d.Get("account_ref").(string),
 		PrivateKey:    []byte(d.Get("private_key_pem").(string)),
 		Certificate:   []byte(d.Get("certificate_pem").(string)),
+		CSR:           []byte(d.Get("cert_request_pem").(string)),
 	}
 	return cert
 }
@@ -393,6 +395,7 @@ func saveCertificateResource(d *schema.ResourceData, cert acme.CertificateResour
 	d.Set("account_ref", cert.AccountRef)
 	d.Set("private_key_pem", string(cert.PrivateKey))
 	d.Set("certificate_pem", string(cert.Certificate))
+	// note that CSR is skipped as it is not computed.
 }
 
 // certDaysRemaining takes an acme.CertificateResource, parses the
