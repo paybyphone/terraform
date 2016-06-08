@@ -83,26 +83,29 @@ func registrationSchema() map[string]*schema.Schema {
 func certificateSchema() map[string]*schema.Schema {
 	return map[string]*schema.Schema{
 		"common_name": &schema.Schema{
-			Type:     schema.TypeString,
-			Required: true,
-			ForceNew: true,
+			Type:          schema.TypeString,
+			Optional:      true,
+			ForceNew:      true,
+			ConflictsWith: []string{"certificate_request_pem"},
 		},
 		"subject_alternate_names": &schema.Schema{
-			Type:     schema.TypeSet,
-			Optional: true,
-			Elem:     &schema.Schema{Type: schema.TypeString},
-			Set:      schema.HashString,
-			ForceNew: true,
+			Type:          schema.TypeSet,
+			Optional:      true,
+			Elem:          &schema.Schema{Type: schema.TypeString},
+			Set:           schema.HashString,
+			ForceNew:      true,
+			ConflictsWith: []string{"certificate_request_pem"},
 		},
-		"key_bits": &schema.Schema{
-			Type:     schema.TypeString,
-			Optional: true,
-			ForceNew: true,
-			Default:  "2048",
+		"key_type": &schema.Schema{
+			Type:          schema.TypeString,
+			Optional:      true,
+			ForceNew:      true,
+			Default:       "2048",
+			ConflictsWith: []string{"certificate_request_pem"},
 			ValidateFunc: func(v interface{}, k string) (ws []string, errors []error) {
 				value := v.(string)
 				found := false
-				for _, w := range []string{"2048", "4096", "8192"} {
+				for _, w := range []string{"P256", "P384", "2048", "4096", "8192"} {
 					if value == w {
 						found = true
 					}
@@ -113,6 +116,11 @@ func certificateSchema() map[string]*schema.Schema {
 				}
 				return
 			},
+		},
+		"certificate_request_pem": &schema.Schema{
+			Type:          schema.TypeString,
+			Optional:      true,
+			ConflictsWith: []string{"common_name", "subject_alternate_names", "key_type"},
 		},
 		"min_days_remaining": &schema.Schema{
 			Type:     schema.TypeInt,
@@ -209,7 +217,7 @@ func registrationSchemaFull() map[string]*schema.Schema {
 	return m
 }
 
-// certificateSchemaFull returns a merged baseCheckSchema +certificateSchema.
+// certificateSchemaFull returns a merged baseCheckSchema + certificateSchema.
 func certificateSchemaFull() map[string]*schema.Schema {
 	m := baseCheckSchema()
 	for k, v := range certificateSchema() {
