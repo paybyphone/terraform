@@ -112,36 +112,6 @@ func testAccCheckACMECertificateValid(n, cn, san string) resource.TestCheckFunc 
 	}
 }
 
-func testAccCheckACMECertificateCSRSubject(n string) resource.TestCheckFunc {
-	return func(s *terraform.State) error {
-		rs, ok := s.RootModule().Resources[n]
-		if !ok {
-			return fmt.Errorf("Can't find ACME certificate: %s", n)
-		}
-
-		if rs.Primary.ID == "" {
-			return fmt.Errorf("ACME certificate ID not set")
-		}
-
-		cert := rs.Primary.Attributes["certificate_pem"]
-
-		x509Certs, err := parsePEMBundle([]byte(cert))
-		if err != nil {
-			return err
-		}
-		x509Cert := x509Certs[0]
-
-		expectedOrg := []string{"ACME Examples, Inc"}
-		actualOrg := x509Cert.Subject.Organization
-
-		if reflect.DeepEqual(expectedOrg, actualOrg) != true {
-			return fmt.Errorf("Expected org to be %#v, got %#v", expectedOrg, actualOrg)
-		}
-
-		return nil
-	}
-}
-
 func testAccCheckACMECertificateDestroy(s *terraform.State) error {
 	for _, rs := range s.RootModule().Resources {
 		if rs.Type != "acme_certificate" {
