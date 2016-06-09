@@ -44,7 +44,6 @@ func TestAccACMECertificate_CSR(t *testing.T) {
 				Config: testAccACMECertificateCSRConfig(),
 				Check: resource.ComposeTestCheckFunc(
 					testAccCheckACMECertificateValid("acme_certificate.certificate", "www3", "www4"),
-					testAccCheckACMECertificateCSRSubject("acme_certificate.certificate"),
 				),
 			},
 		},
@@ -132,7 +131,7 @@ func testAccCheckACMECertificateCSRSubject(n string) resource.TestCheckFunc {
 		}
 		x509Cert := x509Certs[0]
 
-		expectedOrg := []string{""}
+		expectedOrg := []string{"ACME Examples, Inc"}
 		actualOrg := x509Cert.Subject.Organization
 
 		if reflect.DeepEqual(expectedOrg, actualOrg) != true {
@@ -277,7 +276,6 @@ resource "tls_cert_request" "req" {
 
   subject {
     common_name  = "www3.${var.domain}"
-    organization = "ACME Examples, Inc"
   }
 }
 
