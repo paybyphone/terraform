@@ -36,8 +36,12 @@ func resourceACMECertificateCreate(d *schema.ResourceData, meta interface{}) err
 	var cert acme.CertificateResource
 	var errs map[string]error
 
-	if csr, ok := d.GetOk("cert_request_pem"); ok {
-		cert, errs = client.ObtainCertificateForCSR([]byte(csr.(string)), false)
+	if v, ok := d.GetOk("cert_request_pem"); ok {
+		csr, err := csrFromPEM([]byte(v.(string)))
+		if err != nil {
+			return err
+		}
+		cert, errs = client.ObtainCertificateForCSR(*csr, false)
 	} else {
 		cn := d.Get("common_name").(string)
 		domains := []string{cn}

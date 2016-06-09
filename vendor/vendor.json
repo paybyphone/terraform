@@ -1514,81 +1514,70 @@
 			"revision": "ba9c9e33906f58169366275e3450db66139a31a9"
 		},
 		{
-			"checksumSHA1": "dqXY34KYUtPFERrjvmvMTbKkW7M=",
-			"origin": "github.com/hashicorp/terraform/vendor/github.com/xenolf/lego/acme",
+			"checksumSHA1": "0ofu6hEJJesCc7tirtTUCE8xlfA=",
 			"path": "github.com/xenolf/lego/acme",
-			"revision": "804b6539018ef702480a9b5b50bea36d70ff41bd",
-			"revisionTime": "2016-06-08T03:04:00Z"
+			"revision": "6381d3024d6e305e844c7fbf77d2df0e2a275632",
+			"revisionTime": "2016-06-08T23:53:42Z"
 		},
 		{
 			"checksumSHA1": "9l4lud3YhUjkh65wvMOxP0Vkibo=",
-			"origin": "github.com/hashicorp/terraform/vendor/github.com/xenolf/lego/providers/dns/cloudflare",
 			"path": "github.com/xenolf/lego/providers/dns/cloudflare",
-			"revision": "804b6539018ef702480a9b5b50bea36d70ff41bd",
-			"revisionTime": "2016-06-08T03:04:00Z"
+			"revision": "6381d3024d6e305e844c7fbf77d2df0e2a275632",
+			"revisionTime": "2016-06-08T23:53:42Z"
 		},
 		{
 			"checksumSHA1": "AxgdtOepFt9YCI9TSWgBbH+OcNM=",
-			"origin": "github.com/hashicorp/terraform/vendor/github.com/xenolf/lego/providers/dns/digitalocean",
 			"path": "github.com/xenolf/lego/providers/dns/digitalocean",
-			"revision": "804b6539018ef702480a9b5b50bea36d70ff41bd",
-			"revisionTime": "2016-06-08T03:04:00Z"
+			"revision": "6381d3024d6e305e844c7fbf77d2df0e2a275632",
+			"revisionTime": "2016-06-08T23:53:42Z"
 		},
 		{
 			"checksumSHA1": "JsIMAs8XEDRm7+PSQ5yTkeNmNQE=",
-			"origin": "github.com/hashicorp/terraform/vendor/github.com/xenolf/lego/providers/dns/dnsimple",
 			"path": "github.com/xenolf/lego/providers/dns/dnsimple",
-			"revision": "804b6539018ef702480a9b5b50bea36d70ff41bd",
-			"revisionTime": "2016-06-08T03:04:00Z"
+			"revision": "6381d3024d6e305e844c7fbf77d2df0e2a275632",
+			"revisionTime": "2016-06-08T23:53:42Z"
 		},
 		{
 			"checksumSHA1": "yN/0N1Zg5P1vHw7ztyjDzqq0hhg=",
-			"origin": "github.com/hashicorp/terraform/vendor/github.com/xenolf/lego/providers/dns/dyn",
 			"path": "github.com/xenolf/lego/providers/dns/dyn",
-			"revision": "804b6539018ef702480a9b5b50bea36d70ff41bd",
-			"revisionTime": "2016-06-08T03:04:00Z"
+			"revision": "6381d3024d6e305e844c7fbf77d2df0e2a275632",
+			"revisionTime": "2016-06-08T23:53:42Z"
 		},
 		{
 			"checksumSHA1": "bBCVJp8rQPBDiRkmDckZ2BG/nLA=",
-			"origin": "github.com/hashicorp/terraform/vendor/github.com/xenolf/lego/providers/dns/gandi",
 			"path": "github.com/xenolf/lego/providers/dns/gandi",
-			"revision": "804b6539018ef702480a9b5b50bea36d70ff41bd",
-			"revisionTime": "2016-06-08T03:04:00Z"
+			"revision": "6381d3024d6e305e844c7fbf77d2df0e2a275632",
+			"revisionTime": "2016-06-08T23:53:42Z"
 		},
 		{
 			"checksumSHA1": "Dy+FrJMHb2ugp4WKDUtn/Tsc0jI=",
-			"origin": "github.com/hashicorp/terraform/vendor/github.com/xenolf/lego/providers/dns/googlecloud",
 			"path": "github.com/xenolf/lego/providers/dns/googlecloud",
-			"revision": "804b6539018ef702480a9b5b50bea36d70ff41bd",
-			"revisionTime": "2016-06-08T03:04:00Z"
+			"revision": "6381d3024d6e305e844c7fbf77d2df0e2a275632",
+			"revisionTime": "2016-06-08T23:53:42Z"
 		},
 		{
 			"checksumSHA1": "sKybs+vzQjT+TbZFbhHZ1W/3Sss=",
-			"origin": "github.com/hashicorp/terraform/vendor/github.com/xenolf/lego/providers/dns/namecheap",
 			"path": "github.com/xenolf/lego/providers/dns/namecheap",
-			"revision": "804b6539018ef702480a9b5b50bea36d70ff41bd",
-			"revisionTime": "2016-06-08T03:04:00Z"
+			"revision": "6381d3024d6e305e844c7fbf77d2df0e2a275632",
+			"revisionTime": "2016-06-08T23:53:42Z"
 		},
 		{
 			"checksumSHA1": "QMRmc33MRVBo1qQyOk3lVqkOM8Y=",
-			"origin": "github.com/hashicorp/terraform/vendor/github.com/xenolf/lego/providers/dns/rfc2136",
 			"path": "github.com/xenolf/lego/providers/dns/rfc2136",
-			"revision": "804b6539018ef702480a9b5b50bea36d70ff41bd",
-			"revisionTime": "2016-06-08T03:04:00Z"
+			"revision": "6381d3024d6e305e844c7fbf77d2df0e2a275632",
+			"revisionTime": "2016-06-08T23:53:42Z"
 		},
 		{
 			"checksumSHA1": "h4oYWjG319q5DroteiwrVl/9Z64=",
-			"origin": "github.com/hashicorp/terraform/vendor/github.com/xenolf/lego/providers/dns/route53",
 			"path": "github.com/xenolf/lego/providers/dns/route53",
-			"revision": "804b6539018ef702480a9b5b50bea36d70ff41bd",
-			"revisionTime": "2016-06-08T03:04:00Z"
+			"revision": "6381d3024d6e305e844c7fbf77d2df0e2a275632",
+			"revisionTime": "2016-06-08T23:53:42Z"
 		},
 		{
 			"checksumSHA1": "Zc26smIckdtNeDPquh9YkRoFNKA=",
-			"origin": "github.com/hashicorp/terraform/vendor/github.com/xenolf/lego/providers/dns/vultr",
 			"path": "github.com/xenolf/lego/providers/dns/vultr",
-			"revision": "804b6539018ef702480a9b5b50bea36d70ff41bd",
-			"revisionTime": "2016-06-08T03:04:00Z"
+			"revision": "6381d3024d6e305e844c7fbf77d2df0e2a275632",
+			"revisionTime": "2016-06-08T23:53:42Z"
 		},
 		{
 			"comment": "v1.5.4-13-g75ce5fb",

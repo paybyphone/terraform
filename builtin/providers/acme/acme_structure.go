@@ -524,17 +524,35 @@ func stringSlice(src []interface{}) []string {
 	return dst
 }
 
-// privateKeyFromPEM is converts a PEM block into a crypto.PrivateKey.
-func privateKeyFromPEM(keyPEM []byte) (crypto.PrivateKey, error) {
-	result, _ := pem.Decode([]byte(keyPEM))
-	if result == nil {
-		return nil, fmt.Errorf("Cannot decode supplied PEM data")
+// privateKeyFromPEM converts a PEM block into a crypto.PrivateKey.
+func privateKeyFromPEM(pemData []byte) (crypto.PrivateKey, error) {
+	var result *pem.Block
+	rest := pemData
+	for {
+		result, rest = pem.Decode([]byte(rest))
+		if result == nil {
+			return nil, fmt.Errorf("Cannot decode supplied PEM data")
+		}
+		switch result.Type {
+		case "RSA PRIVATE KEY":
+			return x509.ParsePKCS1PrivateKey(result.Bytes)
+		case "EC PRIVATE KEY":
+			return x509.ParseECPrivateKey(result.Bytes)
+		}
 	}
-	switch result.Type {
-	case "RSA PRIVATE KEY":
-		return x509.ParsePKCS1PrivateKey(result.Bytes)
-	case "EC PRIVATE KEY":
-		return x509.ParseECPrivateKey(result.Bytes)
+}
+
+// csrFromPEM converts a PEM block into an *x509.CertificateRequest.
+func csrFromPEM(pemData []byte) (*x509.CertificateRequest, error) {
+	var result *pem.Block
+	rest := pemData
+	for {
+		result, rest = pem.Decode([]byte(rest))
+		if result == nil {
+			return nil, fmt.Errorf("Cannot decode supplied PEM data")
+		}
+		if result.Type == "CERTIFICATE REQUEST" {
+			return x509.ParseCertificateRequest(result.Bytes)
+		}
 	}
-	return nil, fmt.Errorf("PEM data is not a private key")
 }
