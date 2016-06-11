@@ -39,9 +39,10 @@ func baseCheckSchema() map[string]*schema.Schema {
 			ForceNew: true,
 		},
 		"account_key_pem": &schema.Schema{
-			Type:     schema.TypeString,
-			Required: true,
-			ForceNew: true,
+			Type:      schema.TypeString,
+			Required:  true,
+			ForceNew:  true,
+			Sensitive: true,
 		},
 	}
 }
@@ -58,8 +59,9 @@ func registrationSchema() map[string]*schema.Schema {
 			ForceNew: true,
 		},
 		"registration_body": &schema.Schema{
-			Type:     schema.TypeString,
-			Computed: true,
+			Type:      schema.TypeString,
+			Computed:  true,
+			Sensitive: true,
 		},
 		"registration_url": &schema.Schema{
 			Type:     schema.TypeString,
@@ -195,8 +197,9 @@ func certificateSchema() map[string]*schema.Schema {
 			Computed: true,
 		},
 		"private_key_pem": &schema.Schema{
-			Type:     schema.TypeString,
-			Computed: true,
+			Type:      schema.TypeString,
+			Computed:  true,
+			Sensitive: true,
 		},
 		"certificate_pem": &schema.Schema{
 			Type:     schema.TypeString,
