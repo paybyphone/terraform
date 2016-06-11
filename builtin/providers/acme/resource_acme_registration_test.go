@@ -38,7 +38,7 @@ func testAccCheckACMERegistrationValid(n string) resource.TestCheckFunc {
 
 		d := testAccCheckACMERegistrationResourceData(rs)
 
-		client, _, err := expandACMEClient(d, d.Get("registration_uri").(string))
+		client, _, err := expandACMEClient(d, d.Get("registration_url").(string))
 		if err != nil {
 			return fmt.Errorf("Could not build ACME client off reg: %s", err.Error())
 		}
@@ -70,7 +70,7 @@ func testAccCheckACMERegistrationResourceData(rs *terraform.ResourceState) *sche
 	d.Set("account_key_pem", rs.Primary.Attributes["account_key_pem"])
 	d.Set("email_address", rs.Primary.Attributes["email_address"])
 	d.Set("registration_body", rs.Primary.Attributes["registration_body"])
-	d.Set("registration_uri", rs.Primary.Attributes["registration_uri"])
+	d.Set("registration_url", rs.Primary.Attributes["registration_url"])
 	d.Set("registration_new_authz_url", rs.Primary.Attributes["registration_new_authz_url"])
 	d.Set("registration_tos_url", rs.Primary.Attributes["registration_tos_url"])
 

@@ -190,10 +190,6 @@ func certificateSchema() map[string]*schema.Schema {
 			Type:     schema.TypeString,
 			Computed: true,
 		},
-		"cert_stable_url": &schema.Schema{
-			Type:     schema.TypeString,
-			Computed: true,
-		},
 		"account_ref": &schema.Schema{
 			Type:     schema.TypeString,
 			Computed: true,
@@ -375,13 +371,12 @@ func expandACMEClient(d *schema.ResourceData, regURL string) (*acme.Client, *acm
 // and returns an acme.CertificateResource.
 func expandCertificateResource(d *schema.ResourceData) acme.CertificateResource {
 	cert := acme.CertificateResource{
-		Domain:        d.Get("cert_domain").(string),
-		CertURL:       d.Get("cert_url").(string),
-		CertStableURL: d.Get("cert_stable_url").(string),
-		AccountRef:    d.Get("account_ref").(string),
-		PrivateKey:    []byte(d.Get("private_key_pem").(string)),
-		Certificate:   []byte(d.Get("certificate_pem").(string)),
-		CSR:           []byte(d.Get("cert_request_pem").(string)),
+		Domain:      d.Get("cert_domain").(string),
+		CertURL:     d.Get("cert_url").(string),
+		AccountRef:  d.Get("account_ref").(string),
+		PrivateKey:  []byte(d.Get("private_key_pem").(string)),
+		Certificate: []byte(d.Get("certificate_pem").(string)),
+		CSR:         []byte(d.Get("cert_request_pem").(string)),
 	}
 	return cert
 }
@@ -391,7 +386,6 @@ func saveCertificateResource(d *schema.ResourceData, cert acme.CertificateResour
 	d.SetId(cert.CertURL)
 	d.Set("cert_domain", cert.Domain)
 	d.Set("cert_url", cert.CertURL)
-	d.Set("cert_stable_url", cert.CertStableURL)
 	d.Set("account_ref", cert.AccountRef)
 	d.Set("private_key_pem", string(cert.PrivateKey))
 	d.Set("certificate_pem", string(cert.Certificate))

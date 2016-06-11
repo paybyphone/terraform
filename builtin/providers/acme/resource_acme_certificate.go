@@ -21,7 +21,7 @@ func resourceACMECertificate() *schema.Resource {
 }
 
 func resourceACMECertificateCreate(d *schema.ResourceData, meta interface{}) error {
-	client, _, err := expandACMEClient(d, d.Get("registration_uri").(string))
+	client, _, err := expandACMEClient(d, d.Get("registration_url").(string))
 	if err != nil {
 		return err
 	}
@@ -81,7 +81,7 @@ func resourceACMECertificateRead(d *schema.ResourceData, meta interface{}) error
 		return nil
 	}
 
-	client, _, err := expandACMEClient(d, d.Get("registration_uri").(string))
+	client, _, err := expandACMEClient(d, d.Get("registration_url").(string))
 	if err != nil {
 		return err
 	}
@@ -111,7 +111,7 @@ func resourceACMECertificateRead(d *schema.ResourceData, meta interface{}) error
 
 // resourceACMECertificateDelete "deletes" the certificate by revoking it.
 func resourceACMECertificateDelete(d *schema.ResourceData, meta interface{}) error {
-	client, _, err := expandACMEClient(d, d.Get("registration_uri").(string))
+	client, _, err := expandACMEClient(d, d.Get("registration_url").(string))
 	if err != nil {
 		return err
 	}
