@@ -210,7 +210,7 @@ resource "acme_certificate" "certificate" {
     provider = "route53"
   }
 
-  registration_uri = "${acme_registration.reg.registration_uri}"
+  registration_url = "${acme_registration.reg.id}"
 }
 `, os.Getenv("ACME_EMAIL_ADDRESS"), os.Getenv("ACME_CERT_DOMAIN"))
 }
@@ -258,7 +258,7 @@ resource "acme_certificate" "certificate" {
     provider = "route53"
   }
 
-  registration_uri = "${acme_registration.reg.registration_uri}"
+  registration_url = "${acme_registration.reg.id}"
 }
 `, os.Getenv("ACME_EMAIL_ADDRESS"), os.Getenv("ACME_CERT_DOMAIN"))
 }

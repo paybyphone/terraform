@@ -61,7 +61,7 @@ func registrationSchema() map[string]*schema.Schema {
 			Type:     schema.TypeString,
 			Computed: true,
 		},
-		"registration_uri": &schema.Schema{
+		"registration_url": &schema.Schema{
 			Type:     schema.TypeString,
 			Computed: true,
 		},
@@ -177,7 +177,7 @@ func certificateSchema() map[string]*schema.Schema {
 			Default:  443,
 			ForceNew: true,
 		},
-		"registration_uri": &schema.Schema{
+		"registration_url": &schema.Schema{
 			Type:     schema.TypeString,
 			Required: true,
 			ForceNew: true,
@@ -296,7 +296,7 @@ func expandACMERegistration(d *schema.ResourceData) (*acme.RegistrationResource,
 	}
 	reg.Body = body
 
-	if v, ok = d.GetOk("registration_uri"); ok == false {
+	if v, ok = d.GetOk("registration_url"); ok == false {
 		return nil, false
 	}
 	reg.URI = v.(string)
@@ -326,7 +326,7 @@ func saveACMERegistration(d *schema.ResourceData, reg *acme.RegistrationResource
 	}
 	d.Set("registration_body", string(body))
 
-	d.Set("registration_uri", reg.URI)
+	d.Set("registration_url", reg.URI)
 	d.Set("registration_new_authz_url", reg.NewAuthzURL)
 	d.Set("registration_tos_url", reg.TosURL)
 

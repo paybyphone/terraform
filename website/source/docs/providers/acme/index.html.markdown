@@ -64,7 +64,7 @@ resource "acme_certificate" "certificate" {
     provider = "route53"
   }
 
-  registration_uri = "${acme_registration.reg.registration_uri}"
+  registration_url = "${acme_registration.reg.id}"
 }
 ```
 
