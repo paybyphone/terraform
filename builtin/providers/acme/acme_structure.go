@@ -262,13 +262,10 @@ func expandACMEUser(d *schema.ResourceData) (*acmeUser, error) {
 		key: key,
 	}
 
-	// only set these fields if they are in the schema.
+	// only set these email if it's in the schema.
 	if v, ok := d.GetOk("email_address"); ok {
 		user.Email = v.(string)
 	}
-	//if reg, ok := expandACMERegistration(d); ok {
-	//user.Registration = reg
-	//}
 
 	return user, nil
 }
