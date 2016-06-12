@@ -276,6 +276,11 @@ func expandACMEUser(d *schema.ResourceData) (*acmeUser, error) {
 // Note that this function will return nil, false if any of the computed
 // registration fields are un-readable, to allow non-fatal behaviour when the
 // data does not exist.
+//
+// TODO: This function is currently unused as registrations do not currently
+// seem to be deletable in Let's Encrypt.
+// Leaving it here, with an appropriate unit test, so that once this
+// functionality becomes available it will be easy to grab the reg for deletion.
 func expandACMERegistration(d *schema.ResourceData) (*acme.RegistrationResource, bool) {
 	reg := acme.RegistrationResource{}
 	var v interface{}
@@ -316,7 +321,7 @@ func expandACMERegistration(d *schema.ResourceData) (*acme.RegistrationResource,
 func saveACMERegistration(d *schema.ResourceData, reg *acme.RegistrationResource) error {
 	d.SetId(reg.URI)
 
-	body, err := json.Marshal(reg)
+	body, err := json.Marshal(reg.Body)
 	if err != nil {
 		return fmt.Errorf("error reading registration body: %s", err.Error())
 	}
