@@ -10,6 +10,7 @@ import (
 	"fmt"
 	"log"
 	"os"
+	"sort"
 	"time"
 
 	"github.com/hashicorp/terraform/helper/hashcode"
@@ -27,11 +28,11 @@ import (
 	"github.com/xenolf/lego/providers/dns/vultr"
 )
 
-// baseCheckSchema returns a map[string]*schema.Schema with all the elements
+// baseACMESchema returns a map[string]*schema.Schema with all the elements
 // necessary to build the base elements of an ACME resource schema. Use this,
 // along with a schema helper of a specific check type, to return the full
 // schema.
-func baseCheckSchema() map[string]*schema.Schema {
+func baseACMESchema() map[string]*schema.Schema {
 	return map[string]*schema.Schema{
 		"server_url": &schema.Schema{
 			Type:     schema.TypeString,
@@ -104,20 +105,7 @@ func certificateSchema() map[string]*schema.Schema {
 			ForceNew:      true,
 			Default:       "2048",
 			ConflictsWith: []string{"cert_request_pem"},
-			ValidateFunc: func(v interface{}, k string) (ws []string, errors []error) {
-				value := v.(string)
-				found := false
-				for _, w := range []string{"P256", "P384", "2048", "4096", "8192"} {
-					if value == w {
-						found = true
-					}
-				}
-				if found == false {
-					errors = append(errors, fmt.Errorf(
-						"Certificate key type must be one of P256, P384, 2048, 4096, or 8192"))
-				}
-				return
-			},
+			ValidateFunc:  validateKeyType,
 		},
 		"cert_request_pem": &schema.Schema{
 			Type:          schema.TypeString,
@@ -143,25 +131,9 @@ func certificateSchema() map[string]*schema.Schema {
 						Required: true,
 					},
 					"config": &schema.Schema{
-						Type:     schema.TypeMap,
-						Optional: true,
-						ValidateFunc: func(v interface{}, k string) (ws []string, errors []error) {
-							value := v.(map[string]interface{})
-							bad := false
-							for _, w := range value {
-								switch w.(type) {
-								case string:
-									continue
-								default:
-									bad = true
-								}
-							}
-							if bad == true {
-								errors = append(errors, fmt.Errorf(
-									"DNS challenge config map values must be strings only"))
-							}
-							return
-						},
+						Type:         schema.TypeMap,
+						Optional:     true,
+						ValidateFunc: validateDNSChallengeConfig,
 					},
 				},
 			},
@@ -208,18 +180,18 @@ func certificateSchema() map[string]*schema.Schema {
 	}
 }
 
-// registrationSchemaFull returns a merged baseCheckSchema + registrationSchema.
+// registrationSchemaFull returns a merged baseACMESchema + registrationSchema.
 func registrationSchemaFull() map[string]*schema.Schema {
-	m := baseCheckSchema()
+	m := baseACMESchema()
 	for k, v := range registrationSchema() {
 		m[k] = v
 	}
 	return m
 }
 
-// certificateSchemaFull returns a merged baseCheckSchema + certificateSchema.
+// certificateSchemaFull returns a merged baseACMESchema + certificateSchema.
 func certificateSchemaFull() map[string]*schema.Schema {
-	m := baseCheckSchema()
+	m := baseACMESchema()
 	for k, v := range certificateSchema() {
 		m[k] = v
 	}
@@ -508,8 +480,15 @@ func dnsChallengeSetHash(v interface{}) int {
 	var buf bytes.Buffer
 	m := v.(map[string]interface{})
 	buf.WriteString(fmt.Sprintf("%s-", m["provider"].(string)))
-	for k, v := range m["config"].(map[string]interface{}) {
-		buf.WriteString(fmt.Sprintf("%s-%s-", k, v.(string)))
+	// sort the keys first so that the hash is consistent every time
+	keys := []string{}
+	for k := range m["config"].(map[string]interface{}) {
+		keys = append(keys, k)
+	}
+	sort.Strings(keys)
+	// now write out the hash values
+	for _, k := range keys {
+		buf.WriteString(fmt.Sprintf("%s-%s-", k, m["config"].(map[string]interface{})[k].(string)))
 	}
 	return hashcode.String(buf.String())
 }
@@ -554,4 +533,41 @@ func csrFromPEM(pemData []byte) (*x509.CertificateRequest, error) {
 			return x509.ParseCertificateRequest(result.Bytes)
 		}
 	}
+}
+
+// validateKeyType validates a key_type resource parameter is correct.
+func validateKeyType(v interface{}, k string) (ws []string, errors []error) {
+	value := v.(string)
+	found := false
+	for _, w := range []string{"P256", "P384", "2048", "4096", "8192"} {
+		if value == w {
+			found = true
+		}
+	}
+	if found == false {
+		errors = append(errors, fmt.Errorf(
+			"Certificate key type must be one of P256, P384, 2048, 4096, or 8192"))
+	}
+	return
+}
+
+// validateDNSChallengeConfig ensures that the values supplied to the
+// dns_challenge resource parameter in the acme_certificate resource
+// are string values only.
+func validateDNSChallengeConfig(v interface{}, k string) (ws []string, errors []error) {
+	value := v.(map[string]interface{})
+	bad := false
+	for _, w := range value {
+		switch w.(type) {
+		case string:
+			continue
+		default:
+			bad = true
+		}
+	}
+	if bad == true {
+		errors = append(errors, fmt.Errorf(
+			"DNS challenge config map values must be strings only"))
+	}
+	return
 }

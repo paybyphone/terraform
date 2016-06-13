@@ -115,6 +115,15 @@ func registrationResourceData() *schema.ResourceData {
 	return d
 }
 
+func blankBaseResource() *schema.ResourceData {
+	r := &schema.Resource{
+		Schema: baseACMESchema(),
+	}
+	d := r.TestResourceData()
+	d.Set("account_key_pem", testPrivateKeyText)
+	return d
+}
+
 func TestACME_registrationSchemaFull(t *testing.T) {
 	m := registrationSchemaFull()
 	fields := []string{"email_address", "registration_body", "registration_url", "registration_new_authz_url", "registration_tos_url"}
@@ -171,32 +180,188 @@ func TestACME_expandACMEUser(t *testing.T) {
 	}
 }
 
-func TestACME_expandACMERegistration(t *testing.T) {
-	reg := testRegData()
-	r := &schema.Resource{
-		Schema: registrationSchemaFull(),
-	}
-	actual := r.TestResourceData()
-	err := saveACMERegistration(actual, reg)
-	if err != nil {
-		t.Fatalf("fatal: %s", err.Error())
-	}
-
+func TestACME_expandACMEUser_badKey(t *testing.T) {
 	d := registrationResourceData()
-	expected, ok := expandACMERegistration(d)
+	d.Set("account_key_pem", "bad")
+	_, err := expandACMEUser(d)
+	if err == nil {
+		t.Fatalf("expected error due to bad key")
+	}
+}
+
+func TestACME_expandACMERegistration(t *testing.T) {
+	d := registrationResourceData()
+	actual, ok := expandACMERegistration(d)
 	if ok == false {
-		t.Fatal("Registration data did not expand properly")
+		t.Fatalf("Got error while expanding registration")
 	}
 
-	if reflect.DeepEqual(expected, actual) {
+	expected := testRegData()
+	if reflect.DeepEqual(expected, actual) == false {
 		t.Fatalf("Expected %#v, got %#v", expected, actual)
 	}
 }
 
-func TestACME_expandACMEClient(t *testing.T) {
-	ts := httpDirTestServer()
-
+func TestACME_expandACMERegistration_noBody(t *testing.T) {
 	d := registrationResourceData()
-	d.Set("server_url", ts.URL)
+	d.Set("registration_body", "")
+	if _, ok := expandACMERegistration(d); ok {
+		t.Fatalf("Expected error due to empty body")
+	}
+}
 
+func TestACME_expandACMERegistration_badBody(t *testing.T) {
+	d := registrationResourceData()
+	d.Set("registration_body", "foo")
+	if _, ok := expandACMERegistration(d); ok {
+		t.Fatalf("Expected error due to bad body data")
+	}
+}
+
+func TestACME_expandACMERegistration_noRegURL(t *testing.T) {
+	d := registrationResourceData()
+	d.Set("registration_url", "")
+	if _, ok := expandACMERegistration(d); ok {
+		t.Fatalf("Expected error due to empty reg URL")
+	}
+}
+
+func TestACME_expandACMERegistration_noNewAuthZ(t *testing.T) {
+	d := registrationResourceData()
+	d.Set("registration_new_authz_url", "")
+	if _, ok := expandACMERegistration(d); ok {
+		t.Fatalf("Expected error due to empty new-authz URL")
+	}
+}
+
+func TestACME_expandACMERegistration_noTOS(t *testing.T) {
+	d := registrationResourceData()
+	d.Set("registration_tos_url", "")
+	if _, ok := expandACMERegistration(d); ok == false {
+		t.Fatalf("Blank TOS URL should have been OK")
+	}
+}
+
+func TestACME_expandACMEClient_badKey(t *testing.T) {
+	d := registrationResourceData()
+	d.Set("account_key_pem", "bad")
+	_, _, err := expandACMEClient(d, "")
+	if err == nil {
+		t.Fatalf("expected error due to bad key")
+	}
+}
+
+func TestACME_expandACMEClient_badURL(t *testing.T) {
+	d := registrationResourceData()
+	d.Set("server_url", "bad://")
+	_, _, err := expandACMEClient(d, "")
+	if err == nil {
+		t.Fatalf("expected error due to bad URL")
+	}
+}
+
+func TestACME_expandACMEClient_badRegURL(t *testing.T) {
+	d := registrationResourceData()
+	_, _, err := expandACMEClient(d, "bad://")
+	if err == nil {
+		t.Fatalf("expected error due to bad reg URL")
+	}
+}
+
+func TestACME_expandACMEClient_noCertData(t *testing.T) {
+	c := acme.CertificateResource{}
+	_, err := certDaysRemaining(c)
+	if err == nil {
+		t.Fatalf("expected error due to bad cert data")
+	}
+}
+
+func TestACME_parsePEMBundle_noData(t *testing.T) {
+	b := []byte{}
+	_, err := parsePEMBundle(b)
+	if err == nil {
+		t.Fatalf("expected error due to no PEM data")
+	}
+}
+
+func TestACME_setDNSChallenge_noProvider(t *testing.T) {
+	m := make(map[string]interface{})
+	d := blankBaseResource()
+	ts := httpDirTestServer()
+	d.Set("server_url", ts.URL)
+	client, _, err := expandACMEClient(d, "")
+	if err != nil {
+		t.Fatalf("fatal: %s", err.Error())
+	}
+
+	err = setDNSChallenge(client, m)
+	if err == nil {
+		t.Fatalf("should have errored due to no provider supplied")
+	}
+}
+
+func TestACME_setDNSChallenge_unsuppotedProvider(t *testing.T) {
+	m := map[string]interface{}{
+		"provider": "foo",
+	}
+	d := blankBaseResource()
+	ts := httpDirTestServer()
+	d.Set("server_url", ts.URL)
+	client, _, err := expandACMEClient(d, "")
+	if err != nil {
+		t.Fatalf("fatal: %s", err.Error())
+	}
+
+	err = setDNSChallenge(client, m)
+	if err == nil {
+		t.Fatalf("should have errored due to unknown provider")
+	}
+}
+
+func TestACME_csrFromPEM_badData(t *testing.T) {
+	b := []byte{}
+	_, err := csrFromPEM(b)
+	if err == nil {
+		t.Fatalf("expected error due to no PEM data")
+	}
+}
+
+func TestACME_validateKeyType(t *testing.T) {
+	s := "2048"
+
+	_, errs := validateKeyType(s, "key_type")
+	if len(errs) > 0 {
+		t.Fatalf("bad: %#v", errs)
+	}
+}
+
+func TestACME_validateKeyType_invalid(t *testing.T) {
+	s := "512"
+
+	_, errs := validateKeyType(s, "key_type")
+	if len(errs) < 1 {
+		t.Fatalf("should have given an error")
+	}
+}
+
+func TestACME_validateDNSChallengeConfig(t *testing.T) {
+	m := map[string]interface{}{
+		"AWS_FOO": "bar",
+	}
+
+	_, errs := validateDNSChallengeConfig(m, "config")
+	if len(errs) > 0 {
+		t.Fatalf("bad: %#v", errs)
+	}
+}
+
+func TestACME_validateDNSChallengeConfig_invalid(t *testing.T) {
+	s := map[string]interface{}{
+		"AWS_FOO": 1,
+	}
+
+	_, errs := validateDNSChallengeConfig(s, "config")
+	if len(errs) < 1 {
+		t.Fatalf("should have given an error")
+	}
 }

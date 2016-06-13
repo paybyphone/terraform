@@ -50,6 +50,60 @@ func TestAccACMECertificate_CSR(t *testing.T) {
 	})
 }
 
+func TestAccACMECertificate_withDNSProviderConfig(t *testing.T) {
+	resource.Test(t, resource.TestCase{
+		PreCheck:     func() { testAccPreCheckCert(t) },
+		Providers:    testAccProviders,
+		CheckDestroy: testAccCheckACMECertificateDestroy,
+		Steps: []resource.TestStep{
+			resource.TestStep{
+				Config: testAccACMECertificateWithDNSProviderConfig(),
+				Check: resource.ComposeTestCheckFunc(
+					testAccCheckACMECertificateValid("acme_certificate.certificate", "www5", ""),
+				),
+			},
+		},
+	})
+}
+
+func TestAccACMECertificate_forceRenewal(t *testing.T) {
+	resource.Test(t, resource.TestCase{
+		PreCheck:     func() { testAccPreCheckCert(t) },
+		Providers:    testAccProviders,
+		CheckDestroy: testAccCheckACMECertificateDestroy,
+		Steps: []resource.TestStep{
+			resource.TestStep{
+				Config: testAccACMECertificateForceRenewalConfig(),
+				Check: resource.ComposeTestCheckFunc(
+					testAccCheckACMECertificateValid("acme_certificate.certificate", "www6", ""),
+				),
+			},
+		},
+	})
+}
+
+func TestAccACMECertificate_httpChallenge(t *testing.T) {
+	if v := os.Getenv("ACME_HTTP_R53_ZONE_ID"); v == "" {
+		t.Skip("ACME_HTTP_R53_ZONE_ID not set - skipping")
+	}
+	if v := os.Getenv("ACME_HTTP_HOST_IP"); v == "" {
+		t.Skip("ACME_HTTP_HOST_IP not set - skipping")
+	}
+	resource.Test(t, resource.TestCase{
+		PreCheck:     func() { testAccPreCheckCert(t) },
+		Providers:    testAccProviders,
+		CheckDestroy: testAccCheckACMECertificateDestroy,
+		Steps: []resource.TestStep{
+			resource.TestStep{
+				Config: testAccACMECertificateHTTPChallengeConfig(),
+				Check: resource.ComposeTestCheckFunc(
+					testAccCheckACMECertificateValid("acme_certificate.certificate", "www7", ""),
+				),
+			},
+		},
+	})
+}
+
 func testAccCheckACMECertificateValid(n, cn, san string) resource.TestCheckFunc {
 	return func(s *terraform.State) error {
 		rs, ok := s.RootModule().Resources[n]
@@ -95,7 +149,12 @@ func testAccCheckACMECertificateValid(n, cn, san string) resource.TestCheckFunc 
 		// domains
 		domain := "." + os.Getenv("ACME_CERT_DOMAIN")
 		expectedCN := cn + domain
-		expectedSANs := []string{cn + domain, san + domain}
+		var expectedSANs []string
+		if san != "" {
+			expectedSANs = []string{cn + domain, san + domain}
+		} else {
+			expectedSANs = []string{cn + domain}
+		}
 
 		actualCN := x509Cert.Subject.CommonName
 		actualSANs := x509Cert.DNSNames
@@ -261,4 +320,151 @@ resource "acme_certificate" "certificate" {
   registration_url = "${acme_registration.reg.id}"
 }
 `, os.Getenv("ACME_EMAIL_ADDRESS"), os.Getenv("ACME_CERT_DOMAIN"))
+}
+
+func testAccACMECertificateWithDNSProviderConfig() string {
+	return fmt.Sprintf(`
+variable "email_address" {
+  default = "%s"
+}
+
+variable "domain" {
+  default = "%s"
+}
+
+resource "tls_private_key" "private_key" {
+  algorithm = "RSA"
+}
+
+resource "acme_registration" "reg" {
+  server_url      = "https://acme-staging.api.letsencrypt.org/directory"
+  account_key_pem = "${tls_private_key.private_key.private_key_pem}"
+  email_address   = "${var.email_address}"
+}
+
+resource "acme_certificate" "certificate" {
+  server_url                = "https://acme-staging.api.letsencrypt.org/directory"
+  account_key_pem           = "${tls_private_key.private_key.private_key_pem}"
+  common_name               = "www5.${var.domain}"
+
+  dns_challenge {
+    provider = "route53"
+		config {
+			"AWS_PROFILE" = "%s"
+			"AWS_ACCESS_KEY_ID " = "%s"
+			"AWS_SECRET_ACCESS_KEY " = "%s"
+			"AWS_SESSION_TOKEN" = "%s"
+		}
+  }
+
+  registration_url = "${acme_registration.reg.id}"
+}
+`, os.Getenv("ACME_EMAIL_ADDRESS"), os.Getenv("ACME_CERT_DOMAIN"), os.Getenv("AWS_PROFILE"), os.Getenv("AWS_ACCESS_KEY_ID"), os.Getenv("AWS_SECRET_ACCESS_KEY"), os.Getenv("AWS_SESSION_TOKEN"))
+}
+
+func testAccACMECertificateForceRenewalConfig() string {
+	return fmt.Sprintf(`
+variable "email_address" {
+  default = "%s"
+}
+
+variable "domain" {
+  default = "%s"
+}
+
+resource "tls_private_key" "private_key" {
+  algorithm = "RSA"
+}
+
+resource "acme_registration" "reg" {
+  server_url      = "https://acme-staging.api.letsencrypt.org/directory"
+  account_key_pem = "${tls_private_key.private_key.private_key_pem}"
+  email_address   = "${var.email_address}"
+}
+
+resource "acme_certificate" "certificate" {
+  server_url                = "https://acme-staging.api.letsencrypt.org/directory"
+  account_key_pem           = "${tls_private_key.private_key.private_key_pem}"
+  common_name               = "www6.${var.domain}"
+	min_days_remaining        = 720
+
+  dns_challenge {
+    provider = "route53"
+  }
+
+  registration_url = "${acme_registration.reg.id}"
+}
+`, os.Getenv("ACME_EMAIL_ADDRESS"), os.Getenv("ACME_CERT_DOMAIN"))
+}
+
+func testAccACMECertificateECKeyCertConfig() string {
+	return fmt.Sprintf(`
+variable "email_address" {
+  default = "%s"
+}
+
+variable "domain" {
+  default = "%s"
+}
+
+resource "tls_private_key" "private_key" {
+  algorithm = "RSA"
+}
+
+resource "acme_registration" "reg" {
+  server_url      = "https://acme-staging.api.letsencrypt.org/directory"
+  account_key_pem = "${tls_private_key.private_key.private_key_pem}"
+  email_address   = "${var.email_address}"
+}
+
+resource "acme_certificate" "certificate" {
+  server_url                = "https://acme-staging.api.letsencrypt.org/directory"
+  account_key_pem           = "${tls_private_key.private_key.private_key_pem}"
+  common_name               = "www7.${var.domain}"
+
+  dns_challenge {
+    provider = "route53"
+  }
+
+  registration_url = "${acme_registration.reg.id}"
+}
+`, os.Getenv("ACME_EMAIL_ADDRESS"), os.Getenv("ACME_CERT_DOMAIN"))
+}
+
+func testAccACMECertificateHTTPChallengeConfig() string {
+	return fmt.Sprintf(`
+variable "email_address" {
+  default = "%s"
+}
+
+variable "domain" {
+  default = "%s"
+}
+
+resource "tls_private_key" "private_key" {
+  algorithm = "RSA"
+}
+
+resource "acme_registration" "reg" {
+  server_url      = "https://acme-staging.api.letsencrypt.org/directory"
+  account_key_pem = "${tls_private_key.private_key.private_key_pem}"
+  email_address   = "${var.email_address}"
+}
+
+resource "acme_certificate" "certificate" {
+  server_url                = "https://acme-staging.api.letsencrypt.org/directory"
+  account_key_pem           = "${tls_private_key.private_key.private_key_pem}"
+  common_name               = "www8.${var.domain}"
+
+  registration_url = "${acme_registration.reg.id}"
+  resource "aws_route53_record" "www7" {
+    zone_id = "%s"
+    name = "www7"
+    type = "A"
+    ttl = "10"
+    records = ["%s"]
+ }
+
+}
+`, os.Getenv("ACME_EMAIL_ADDRESS"), os.Getenv("ACME_CERT_DOMAIN"), os.Getenv("ACME_HTTP_R53_ZONE_ID"), os.Getenv("ACME_HTTP_HOST_IP"))
 }
