@@ -41,7 +41,7 @@ func resourceACMECertificateCreate(d *schema.ResourceData, meta interface{}) err
 		if err != nil {
 			return err
 		}
-		cert, errs = client.ObtainCertificateForCSR(*csr, false)
+		cert, errs = client.ObtainCertificateForCSR(*csr, true)
 	} else {
 		cn := d.Get("common_name").(string)
 		domains := []string{cn}
@@ -54,7 +54,7 @@ func resourceACMECertificateCreate(d *schema.ResourceData, meta interface{}) err
 			}
 		}
 
-		cert, errs = client.ObtainCertificate(domains, false, nil)
+		cert, errs = client.ObtainCertificate(domains, true, nil)
 	}
 
 	if len(errs) > 0 {
@@ -99,7 +99,7 @@ func resourceACMECertificateRead(d *schema.ResourceData, meta interface{}) error
 			client.SetHTTPAddress(":" + strconv.Itoa(d.Get("http_challenge_port").(int)))
 			client.SetTLSAddress(":" + strconv.Itoa(d.Get("tls_challenge_port").(int)))
 		}
-		newCert, err := client.RenewCertificate(cert, false)
+		newCert, err := client.RenewCertificate(cert, true)
 		if err != nil {
 			return err
 		}

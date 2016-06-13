@@ -226,9 +226,8 @@ The following attributes are exported:
  * `private_key_pem` - The certificate's private key, in PEM format, if the
    certificate was generated from scratch and not with `cert_request_pem`. If
    `cert_request_pem` was used, this will be blank.
- * `certificate_pem` - The certificate in PEM format, if the certificate was
-   generated from scratch and not with `cert_request_pem`. If
-   `cert_request_pem` was used, this will be blank.
+ * `certificate_pem` - The certificate in PEM format.
+ * `issuer_pem` - The intermediate certificate of the issuer.
 
 [1]: https://letsencrypt.org/docs/staging-environment/
 [2]: https://github.com/letsencrypt/boulder

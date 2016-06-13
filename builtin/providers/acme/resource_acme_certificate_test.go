@@ -116,12 +116,19 @@ func testAccCheckACMECertificateValid(n, cn, san string) resource.TestCheckFunc 
 		}
 
 		cert := rs.Primary.Attributes["certificate_pem"]
+		issuer := rs.Primary.Attributes["issuer_pem"]
 		key := rs.Primary.Attributes["private_key_pem"]
 		x509Certs, err := parsePEMBundle([]byte(cert))
 		if err != nil {
 			return err
 		}
 		x509Cert := x509Certs[0]
+
+		issuerCerts, err := parsePEMBundle([]byte(issuer))
+		if err != nil {
+			return err
+		}
+		issuerCert := issuerCerts[0]
 
 		// Skip the private key test if we have an empty key. This is a legit case
 		// that comes up when a CSR is supplied instead of creating a cert from
@@ -144,6 +151,11 @@ func testAccCheckACMECertificateValid(n, cn, san string) resource.TestCheckFunc 
 			if reflect.DeepEqual(x509Cert.PublicKey, privPub) != true {
 				return fmt.Errorf("Public key for cert and private key don't match: %#v, %#v", x509Cert.PublicKey, privPub)
 			}
+		}
+
+		// Ensure the issuer cert is a CA cert
+		if issuerCert.IsCA == false {
+			return fmt.Errorf("issuer_pem is not a CA certificate")
 		}
 
 		// domains

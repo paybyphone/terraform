@@ -177,6 +177,10 @@ func certificateSchema() map[string]*schema.Schema {
 			Type:     schema.TypeString,
 			Computed: true,
 		},
+		"issuer_pem": &schema.Schema{
+			Type:     schema.TypeString,
+			Computed: true,
+		},
 	}
 }
 
@@ -359,14 +363,20 @@ func expandCertificateResource(d *schema.ResourceData) acme.CertificateResource 
 }
 
 // saveCertificateResource takes an acme.CertificateResource and sets fields.
-func saveCertificateResource(d *schema.ResourceData, cert acme.CertificateResource) {
+func saveCertificateResource(d *schema.ResourceData, cert acme.CertificateResource) error {
 	d.SetId(cert.CertURL)
 	d.Set("cert_domain", cert.Domain)
 	d.Set("cert_url", cert.CertURL)
 	d.Set("account_ref", cert.AccountRef)
 	d.Set("private_key_pem", string(cert.PrivateKey))
-	d.Set("certificate_pem", string(cert.Certificate))
+	issued, issuer, err := splitPEMBundle(cert.Certificate)
+	if err != nil {
+		return err
+	}
+	d.Set("certificate_pem", string(issued))
+	d.Set("issuer_pem", string(issuer))
 	// note that CSR is skipped as it is not computed.
+	return nil
 }
 
 // certDaysRemaining takes an acme.CertificateResource, parses the
@@ -376,8 +386,11 @@ func certDaysRemaining(cert acme.CertificateResource) (int64, error) {
 	if err != nil {
 		return 0, err
 	}
-
 	c := x509Certs[0]
+
+	if c.IsCA {
+		return 0, fmt.Errorf("First certificate is a CA certificate")
+	}
 
 	expiry := c.NotAfter.Unix()
 	now := time.Now().Unix()
@@ -385,10 +398,36 @@ func certDaysRemaining(cert acme.CertificateResource) (int64, error) {
 	return (expiry - now) / 86400, nil
 }
 
+// splitPEMBundle get a slice of x509 certificates from parsePEMBundle,
+// and always returns 2 certificates - the issued cert first, and the issuer
+// certificate second.
+//
+// if the certificate count in a bundle is != 2 then this function will fail.
+func splitPEMBundle(bundle []byte) (cert, issuer []byte, err error) {
+	cb, err := parsePEMBundle(bundle)
+	if err != nil {
+		return
+	}
+	if len(cb) != 2 {
+		err = fmt.Errorf("Certificate bundle does not contain exactly 2 certificates")
+		return
+	}
+	// lego always returns the issued cert first, if the CA is first there is a problem
+	if cb[0].IsCA {
+		err = fmt.Errorf("First certificate is a CA certificate")
+		return
+	}
+
+	cert = pem.EncodeToMemory(&pem.Block{Type: "CERTIFICATE", Bytes: cb[0].Raw})
+	issuer = pem.EncodeToMemory(&pem.Block{Type: "CERTIFICATE", Bytes: cb[1].Raw})
+	return
+}
+
 // parsePEMBundle parses a certificate bundle from top to bottom and returns
 // a slice of x509 certificates. This function will error if no certificates are found.
 //
-// Note that this is taken directly from lego - may look at exporting it there.
+// TODO: This was taken from lego directly, consider exporting it there, or
+// consolidating with other TF crypto functions.
 func parsePEMBundle(bundle []byte) ([]*x509.Certificate, error) {
 	var certificates []*x509.Certificate
 	var certDERBlock *pem.Block
