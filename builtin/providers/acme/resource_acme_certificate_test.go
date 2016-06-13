@@ -454,9 +454,11 @@ resource "acme_registration" "reg" {
 resource "acme_certificate" "certificate" {
   server_url                = "https://acme-staging.api.letsencrypt.org/directory"
   account_key_pem           = "${tls_private_key.private_key.private_key_pem}"
-  common_name               = "www8.${var.domain}"
+  common_name               = "www7.${var.domain}"
 
   registration_url = "${acme_registration.reg.id}"
+
+	depends_on = ["aws_route53_record.www7"]
 
 }
 
