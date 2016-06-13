@@ -277,7 +277,6 @@ func (c *Client) ObtainCertificateForCSR(csr x509.CertificateRequest, bundle boo
 	// loop over the SubjectAltName DNS names
 DNSNames:
 	for _, sanName := range csr.DNSNames {
-		// /
 		for _, existingName := range domains {
 			if existingName == sanName {
 				// duplicate; skip this name
@@ -448,7 +447,7 @@ func (c *Client) RenewCertificate(cert CertificateResource, bundle bool) (Certif
 		return cert, nil
 	}
 
-	// If the certificate is the same, than we need to request a new certificate.
+	// If the certificate is the same, then we need to request a new certificate.
 	// Start by checking to see if the certificate was based off a CSR, and
 	// use that if it's defined.
 	if len(cert.CSR) > 0 {

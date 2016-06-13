@@ -261,10 +261,6 @@ func pemDecodeTox509(pem []byte) (*x509.Certificate, error) {
 		return nil, err
 	}
 
-	if pemBlock.Type != "CERTIFICATE REQUEST" {
-		return nil, fmt.Errorf("PEM block is not a certificate request")
-	}
-
 	return x509.ParseCertificate(pemBlock.Bytes)
 }
 
@@ -272,6 +268,10 @@ func pemDecodeTox509CSR(pem []byte) (*x509.CertificateRequest, error) {
 	pemBlock, err := pemDecode(pem)
 	if pemBlock == nil {
 		return nil, err
+	}
+
+	if pemBlock.Type != "CERTIFICATE REQUEST" {
+		return nil, fmt.Errorf("PEM block is not a certificate request")
 	}
 
 	return x509.ParseCertificateRequest(pemBlock.Bytes)

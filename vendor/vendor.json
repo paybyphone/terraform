@@ -1514,70 +1514,70 @@
 			"revision": "ba9c9e33906f58169366275e3450db66139a31a9"
 		},
 		{
-			"checksumSHA1": "0ofu6hEJJesCc7tirtTUCE8xlfA=",
+			"checksumSHA1": "t1isM+UKT6hZobd3/t5Ur4Zru0k=",
 			"path": "github.com/xenolf/lego/acme",
-			"revision": "6381d3024d6e305e844c7fbf77d2df0e2a275632",
-			"revisionTime": "2016-06-08T23:53:42Z"
+			"revision": "20e401a4ff76ee52214664a44434f693c5ad15a3",
+			"revisionTime": "2016-06-13T06:52:15Z"
 		},
 		{
 			"checksumSHA1": "9l4lud3YhUjkh65wvMOxP0Vkibo=",
 			"path": "github.com/xenolf/lego/providers/dns/cloudflare",
-			"revision": "6381d3024d6e305e844c7fbf77d2df0e2a275632",
-			"revisionTime": "2016-06-08T23:53:42Z"
+			"revision": "20e401a4ff76ee52214664a44434f693c5ad15a3",
+			"revisionTime": "2016-06-13T06:52:15Z"
 		},
 		{
 			"checksumSHA1": "AxgdtOepFt9YCI9TSWgBbH+OcNM=",
 			"path": "github.com/xenolf/lego/providers/dns/digitalocean",
-			"revision": "6381d3024d6e305e844c7fbf77d2df0e2a275632",
-			"revisionTime": "2016-06-08T23:53:42Z"
+			"revision": "20e401a4ff76ee52214664a44434f693c5ad15a3",
+			"revisionTime": "2016-06-13T06:52:15Z"
 		},
 		{
 			"checksumSHA1": "JsIMAs8XEDRm7+PSQ5yTkeNmNQE=",
 			"path": "github.com/xenolf/lego/providers/dns/dnsimple",
-			"revision": "6381d3024d6e305e844c7fbf77d2df0e2a275632",
-			"revisionTime": "2016-06-08T23:53:42Z"
+			"revision": "20e401a4ff76ee52214664a44434f693c5ad15a3",
+			"revisionTime": "2016-06-13T06:52:15Z"
 		},
 		{
 			"checksumSHA1": "yN/0N1Zg5P1vHw7ztyjDzqq0hhg=",
 			"path": "github.com/xenolf/lego/providers/dns/dyn",
-			"revision": "6381d3024d6e305e844c7fbf77d2df0e2a275632",
-			"revisionTime": "2016-06-08T23:53:42Z"
+			"revision": "20e401a4ff76ee52214664a44434f693c5ad15a3",
+			"revisionTime": "2016-06-13T06:52:15Z"
 		},
 		{
 			"checksumSHA1": "bBCVJp8rQPBDiRkmDckZ2BG/nLA=",
 			"path": "github.com/xenolf/lego/providers/dns/gandi",
-			"revision": "6381d3024d6e305e844c7fbf77d2df0e2a275632",
-			"revisionTime": "2016-06-08T23:53:42Z"
+			"revision": "20e401a4ff76ee52214664a44434f693c5ad15a3",
+			"revisionTime": "2016-06-13T06:52:15Z"
 		},
 		{
 			"checksumSHA1": "Dy+FrJMHb2ugp4WKDUtn/Tsc0jI=",
 			"path": "github.com/xenolf/lego/providers/dns/googlecloud",
-			"revision": "6381d3024d6e305e844c7fbf77d2df0e2a275632",
-			"revisionTime": "2016-06-08T23:53:42Z"
+			"revision": "20e401a4ff76ee52214664a44434f693c5ad15a3",
+			"revisionTime": "2016-06-13T06:52:15Z"
 		},
 		{
 			"checksumSHA1": "sKybs+vzQjT+TbZFbhHZ1W/3Sss=",
 			"path": "github.com/xenolf/lego/providers/dns/namecheap",
-			"revision": "6381d3024d6e305e844c7fbf77d2df0e2a275632",
-			"revisionTime": "2016-06-08T23:53:42Z"
+			"revision": "20e401a4ff76ee52214664a44434f693c5ad15a3",
+			"revisionTime": "2016-06-13T06:52:15Z"
 		},
 		{
 			"checksumSHA1": "QMRmc33MRVBo1qQyOk3lVqkOM8Y=",
 			"path": "github.com/xenolf/lego/providers/dns/rfc2136",
-			"revision": "6381d3024d6e305e844c7fbf77d2df0e2a275632",
-			"revisionTime": "2016-06-08T23:53:42Z"
+			"revision": "20e401a4ff76ee52214664a44434f693c5ad15a3",
+			"revisionTime": "2016-06-13T06:52:15Z"
 		},
 		{
 			"checksumSHA1": "h4oYWjG319q5DroteiwrVl/9Z64=",
 			"path": "github.com/xenolf/lego/providers/dns/route53",
-			"revision": "6381d3024d6e305e844c7fbf77d2df0e2a275632",
-			"revisionTime": "2016-06-08T23:53:42Z"
+			"revision": "20e401a4ff76ee52214664a44434f693c5ad15a3",
+			"revisionTime": "2016-06-13T06:52:15Z"
 		},
 		{
 			"checksumSHA1": "Zc26smIckdtNeDPquh9YkRoFNKA=",
 			"path": "github.com/xenolf/lego/providers/dns/vultr",
-			"revision": "6381d3024d6e305e844c7fbf77d2df0e2a275632",
-			"revisionTime": "2016-06-08T23:53:42Z"
+			"revision": "20e401a4ff76ee52214664a44434f693c5ad15a3",
+			"revisionTime": "2016-06-13T06:52:15Z"
 		},
 		{
 			"comment": "v1.5.4-13-g75ce5fb",
