@@ -3,6 +3,7 @@ package acme
 import (
 	"testing"
 
+	"github.com/hashicorp/terraform/builtin/providers/aws"
 	"github.com/hashicorp/terraform/builtin/providers/tls"
 	"github.com/hashicorp/terraform/helper/schema"
 	"github.com/hashicorp/terraform/terraform"
@@ -16,6 +17,7 @@ func init() {
 	testAccProviders = map[string]terraform.ResourceProvider{
 		"acme": testAccProvider,
 		"tls":  tls.Provider().(*schema.Provider),
+		"aws":  aws.Provider().(*schema.Provider),
 	}
 }
 
