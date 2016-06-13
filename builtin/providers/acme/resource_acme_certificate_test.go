@@ -457,14 +457,15 @@ resource "acme_certificate" "certificate" {
   common_name               = "www8.${var.domain}"
 
   registration_url = "${acme_registration.reg.id}"
-  resource "aws_route53_record" "www7" {
-    zone_id = "%s"
-    name = "www7"
-    type = "A"
-    ttl = "10"
-    records = ["%s"]
- }
 
+}
+
+resource "aws_route53_record" "www7" {
+	zone_id = "%s"
+	name = "www7"
+	type = "A"
+	ttl = "10"
+	records = ["%s"]
 }
 `, os.Getenv("ACME_EMAIL_ADDRESS"), os.Getenv("ACME_CERT_DOMAIN"), os.Getenv("ACME_HTTP_R53_ZONE_ID"), os.Getenv("ACME_HTTP_HOST_IP"))
 }
