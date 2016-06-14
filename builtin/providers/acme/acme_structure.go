@@ -89,7 +89,7 @@ func certificateSchema() map[string]*schema.Schema {
 			Type:          schema.TypeString,
 			Optional:      true,
 			ForceNew:      true,
-			ConflictsWith: []string{"cert_request_pem"},
+			ConflictsWith: []string{"certificate_request_pem"},
 		},
 		"subject_alternative_names": &schema.Schema{
 			Type:          schema.TypeSet,
@@ -97,17 +97,17 @@ func certificateSchema() map[string]*schema.Schema {
 			Elem:          &schema.Schema{Type: schema.TypeString},
 			Set:           schema.HashString,
 			ForceNew:      true,
-			ConflictsWith: []string{"cert_request_pem"},
+			ConflictsWith: []string{"certificate_request_pem"},
 		},
 		"key_type": &schema.Schema{
 			Type:          schema.TypeString,
 			Optional:      true,
 			ForceNew:      true,
 			Default:       "2048",
-			ConflictsWith: []string{"cert_request_pem"},
+			ConflictsWith: []string{"certificate_request_pem"},
 			ValidateFunc:  validateKeyType,
 		},
-		"cert_request_pem": &schema.Schema{
+		"certificate_request_pem": &schema.Schema{
 			Type:          schema.TypeString,
 			Optional:      true,
 			ForceNew:      true,
@@ -156,11 +156,11 @@ func certificateSchema() map[string]*schema.Schema {
 			Required: true,
 			ForceNew: true,
 		},
-		"cert_domain": &schema.Schema{
+		"certificate_domain": &schema.Schema{
 			Type:     schema.TypeString,
 			Computed: true,
 		},
-		"cert_url": &schema.Schema{
+		"certificate_url": &schema.Schema{
 			Type:     schema.TypeString,
 			Computed: true,
 		},
@@ -352,12 +352,12 @@ func expandACMEClient(d *schema.ResourceData, regURL string) (*acme.Client, *acm
 // and returns an acme.CertificateResource.
 func expandCertificateResource(d *schema.ResourceData) acme.CertificateResource {
 	cert := acme.CertificateResource{
-		Domain:      d.Get("cert_domain").(string),
-		CertURL:     d.Get("cert_url").(string),
+		Domain:      d.Get("certificate_domain").(string),
+		CertURL:     d.Get("certificate_url").(string),
 		AccountRef:  d.Get("account_ref").(string),
 		PrivateKey:  []byte(d.Get("private_key_pem").(string)),
 		Certificate: []byte(d.Get("certificate_pem").(string)),
-		CSR:         []byte(d.Get("cert_request_pem").(string)),
+		CSR:         []byte(d.Get("certificate_request_pem").(string)),
 	}
 	return cert
 }
@@ -365,8 +365,8 @@ func expandCertificateResource(d *schema.ResourceData) acme.CertificateResource 
 // saveCertificateResource takes an acme.CertificateResource and sets fields.
 func saveCertificateResource(d *schema.ResourceData, cert acme.CertificateResource) error {
 	d.SetId(cert.CertURL)
-	d.Set("cert_domain", cert.Domain)
-	d.Set("cert_url", cert.CertURL)
+	d.Set("certificate_domain", cert.Domain)
+	d.Set("certificate_url", cert.CertURL)
 	d.Set("account_ref", cert.AccountRef)
 	d.Set("private_key_pem", string(cert.PrivateKey))
 	issued, issuer, err := splitPEMBundle(cert.Certificate)

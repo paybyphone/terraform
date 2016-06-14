@@ -323,7 +323,7 @@ resource "tls_cert_request" "req" {
 resource "acme_certificate" "certificate" {
   server_url       = "https://acme-staging.api.letsencrypt.org/directory"
   account_key_pem  = "${tls_private_key.reg_private_key.private_key_pem}"
-  cert_request_pem = "${tls_cert_request.req.cert_request_pem}"
+  certificate_request_pem = "${tls_cert_request.req.cert_request_pem}"
 
   dns_challenge {
     provider = "route53"

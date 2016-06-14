@@ -36,7 +36,7 @@ func resourceACMECertificateCreate(d *schema.ResourceData, meta interface{}) err
 	var cert acme.CertificateResource
 	var errs map[string]error
 
-	if v, ok := d.GetOk("cert_request_pem"); ok {
+	if v, ok := d.GetOk("certificate_request_pem"); ok {
 		csr, err := csrFromPEM([]byte(v.(string)))
 		if err != nil {
 			return err

@@ -18,7 +18,7 @@ sure you change the URL to the correct endpoint (currently
 ~> **NOTE:** Some current ACME CA implementations like [Boulder][2] strip
 most of the organization information out of a certificate request's subject,
 so you may wish to confirm with the CA what behaviour to expect when using the
-`cert_request_pem` argument with this resource.
+`certificate_request_pem` argument with this resource.
 
 ## Example
 
@@ -81,7 +81,7 @@ resource "acme_certificate" "certificate" {
 }
 ```
 
-#### Full example with `cert_request_pem` and DNS validation
+#### Full example with `certificate_request_pem` and DNS validation
 
 ```
 resource "tls_private_key" "reg_private_key" {
@@ -111,7 +111,7 @@ resource "tls_cert_request" "req" {
 resource "acme_certificate" "certificate" {
   server_url       = "https://acme-staging.api.letsencrypt.org/directory"
   account_key_pem  = "${tls_private_key.reg_private_key.private_key_pem}"
-  cert_request_pem = "${tls_cert_request.req.cert_request_pem}"
+  certificate_request_pem = "${tls_cert_request.req.cert_request_pem}"
 
   dns_challenge {
     provider = "route53"
@@ -139,7 +139,7 @@ The resource takes the following arguments:
    `P256` and `P384` (for ECDSA keys of respective length) or `2048`, `4096`, 
    and `8192` (for RSA keys of respective length). Required when not
    specifying a CSR. The default is `2048` (RSA key of 2048 bits).
- * `cert_request_pem` - A pre-created certificate request, such as one from
+ * `certificate_request_pem` - A pre-created certificate request, such as one from
    [`tls_cert_request`][3], or one from an external source, in PEM format.
    Either this, or `common_name`, `key_type`, and optionally
    `subject_alternative_names` needs to be specified.
@@ -218,14 +218,14 @@ perform the following:
 
 The following attributes are exported:
 
- * `id` - The full URL of the certificate. Same as `cert_url`.
- * `cert_domain` - The common name of the certificate.
- * `cert_url` - The URL for the certificate. Same as `id`.
+ * `id` - The full URL of the certificate. Same as `certificate_url`.
+ * `certificate_domain` - The common name of the certificate.
+ * `certificate_url` - The URL for the certificate. Same as `id`.
  * `account_ref` - The URI of the registration account for this certificate.
    should be the same as `registration_url`.
  * `private_key_pem` - The certificate's private key, in PEM format, if the
-   certificate was generated from scratch and not with `cert_request_pem`. If
-   `cert_request_pem` was used, this will be blank.
+   certificate was generated from scratch and not with `certificate_request_pem`. If
+   `certificate_request_pem` was used, this will be blank.
  * `certificate_pem` - The certificate in PEM format.
  * `issuer_pem` - The intermediate certificate of the issuer.
 
