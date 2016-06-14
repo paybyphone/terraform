@@ -9,7 +9,6 @@ import (
 	"os"
 	"reflect"
 	"testing"
-	"time"
 
 	"golang.org/x/crypto/ocsp"
 
@@ -190,44 +189,18 @@ func testAccCheckACMECertificateDestroy(s *terraform.State) error {
 		}
 
 		cert := rs.Primary.Attributes["certificate_pem"]
-
-		// Add a state waiter for the OCSP status of the cert, as we have been
-		// seeing sparodic failures, so it's possible revociation is not
-		// instant.
-		state := &resource.StateChangeConf{
-			Pending:    []string{"Good"},
-			Target:     []string{"Revoked"},
-			Refresh:    testAccCheckACMECertificateDestroyRefreshFunc(cert),
-			Timeout:    3 * time.Minute,
-			MinTimeout: 15 * time.Second,
-			Delay:      5 * time.Second,
+		_, resp, err := acme.GetOCSPForCert([]byte(cert))
+		if err != nil {
+			return err
 		}
 
-		_, err := state.WaitForState()
-		if err != nil {
-			return fmt.Errorf("Cert did not revoke: %s", err.Error())
+		if resp.Status != ocsp.Revoked {
+			return fmt.Errorf("Expected OCSP status to be %d, got %d", ocsp.Revoked, resp.Status)
 		}
 
 		return nil
 	}
 	return fmt.Errorf("acme_certificate resource not found")
-}
-
-func testAccCheckACMECertificateDestroyRefreshFunc(cert string) resource.StateRefreshFunc {
-	return func() (interface{}, string, error) {
-		_, resp, err := acme.GetOCSPForCert([]byte(cert))
-		if err != nil {
-			return nil, "", fmt.Errorf("Bad: %s", err.Error())
-		}
-		switch resp.Status {
-		case ocsp.Revoked:
-			return cert, "Revoked", nil
-		case ocsp.Good:
-			return cert, "Good", nil
-		default:
-			return nil, "", fmt.Errorf("Bad status: OCSP status %d", resp.Status)
-		}
-	}
 }
 
 func testAccPreCheckCert(t *testing.T) {
