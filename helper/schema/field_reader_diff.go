@@ -2,6 +2,7 @@ package schema
 
 import (
 	"fmt"
+	"strconv"
 	"strings"
 
 	"github.com/hashicorp/terraform/terraform"
@@ -42,7 +43,7 @@ func (r *DiffFieldReader) ReadField(address []string) (FieldReadResult, error) {
 	case TypeBool, TypeInt, TypeFloat, TypeString:
 		return r.readPrimitive(address, schema)
 	case TypeList:
-		return readListField(r, address, schema)
+		return r.readList(address, schema)
 	case TypeMap:
 		return r.readMap(address, schema)
 	case TypeSet:
@@ -134,6 +135,59 @@ func (r *DiffFieldReader) readPrimitive(
 	}
 
 	return result, nil
+}
+
+func (r *DiffFieldReader) readList(
+	address []string, schema *Schema) (FieldReadResult, error) {
+
+	addrPadded := make([]string, len(address)+1)
+	copy(addrPadded, address)
+	addrPadded[len(addrPadded)-1] = "#"
+
+	// Get the number of elements in the list
+	countResult, err := r.readPrimitive(addrPadded, &Schema{Type: TypeInt})
+	if err != nil {
+		return FieldReadResult{}, err
+	}
+	if !countResult.Exists {
+		// No count, means we have no list
+		countResult.Value = 0
+	}
+
+	// If we have an empty list, then return an empty list
+	if countResult.Computed || countResult.Value.(int) == 0 {
+		return FieldReadResult{
+			Value:    []interface{}{},
+			Exists:   countResult.Exists,
+			Computed: countResult.Computed,
+		}, nil
+	}
+
+	// Go through each count, and get the item value out of it
+	result := make([]interface{}, 0)
+	for i := 0; i < countResult.Value.(int); i++ {
+		is := strconv.FormatInt(int64(i), 10)
+		addrPadded[len(addrPadded)-1] = is
+		rawResult, err := r.ReadField(addrPadded)
+		if err != nil {
+			return FieldReadResult{}, err
+		}
+		if !rawResult.Exists {
+			// This may happen for counter of a nested set (set.#)
+			continue
+		}
+
+		result = append(result, rawResult.Value)
+	}
+
+	if len(result) == 0 {
+		return FieldReadResult{}, nil
+	}
+
+	return FieldReadResult{
+		Value:  result,
+		Exists: true,
+	}, nil
 }
 
 func (r *DiffFieldReader) readSet(
