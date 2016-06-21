@@ -1,8 +1,12 @@
 package schema
 
 import (
+	"bytes"
+	"fmt"
 	"reflect"
 	"testing"
+
+	"github.com/hashicorp/terraform/helper/hashcode"
 )
 
 func TestAddrToSchema(t *testing.T) {
@@ -413,6 +417,27 @@ func TestReadList_SetInList(t *testing.T) {
 						Set:      HashString,
 						Elem:     &Schema{Type: TypeString},
 					},
+					"inner_complex_set": &Schema{
+						Type:     TypeSet,
+						Required: true,
+						Set:      innerComplexSetHash,
+						Elem: &Resource{
+							Schema: map[string]*Schema{
+								"inner_string": &Schema{
+									Type:     TypeString,
+									Optional: true,
+								},
+								"inner_bool": &Schema{
+									Type:     TypeBool,
+									Optional: true,
+								},
+								"inner_int": &Schema{
+									Type:     TypeInt,
+									Required: true,
+								},
+							},
+						},
+					},
 				},
 			},
 		},
@@ -425,12 +450,16 @@ func TestReadList_SetInList(t *testing.T) {
 	r := &MapFieldReader{
 		Schema: schema,
 		Map: BasicMapReader(map[string]string{
-			"id":                                      "8395051352714003426",
-			"main_int":                                "9",
-			"main_list.#":                             "1",
-			"main_list.0.inner_string_set.#":          "2",
-			"main_list.0.inner_string_set.2654390964": "blue",
-			"main_list.0.inner_string_set.3499814433": "green",
+			"id":                                                    "8395051352714003426",
+			"main_int":                                              "9",
+			"main_list.#":                                           "1",
+			"main_list.0.inner_string_set.#":                        "2",
+			"main_list.0.inner_string_set.2654390964":               "blue",
+			"main_list.0.inner_string_set.3499814433":               "green",
+			"main_list.0.inner_complex_set.#":                       "1",
+			"main_list.0.inner_complex_set.2894159868.inner_string": "foo",
+			"main_list.0.inner_complex_set.2894159868.inner_bool":   "true",
+			"main_list.0.inner_complex_set.2894159868.inner_int":    "433332",
 		}),
 	}
 
@@ -459,4 +488,13 @@ func TestReadList_SetInList(t *testing.T) {
 	if !reflect.DeepEqual(set, expectedSet) {
 		t.Fatalf("Given: %#v\n\nExpected: %#v", set, expectedSet)
 	}
+}
+
+func innerComplexSetHash(v interface{}) int {
+	var buf bytes.Buffer
+	m := v.(map[string]interface{})
+	buf.WriteString(fmt.Sprintf("%s-", m["inner_string"].(string)))
+	buf.WriteString(fmt.Sprintf("%t-", m["inner_bool"].(bool)))
+	buf.WriteString(fmt.Sprintf("%d-", m["inner_int"].(int)))
+	return hashcode.String(buf.String())
 }
